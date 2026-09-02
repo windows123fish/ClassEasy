@@ -1,0 +1,100 @@
+using System;
+using System.Threading;
+using System.Windows;
+using ClassEasy.Models;
+using ClassEasy.Services;
+
+namespace ClassEasy
+{
+    /// <summary>
+    /// 应用程序入口。负责单实例控制、系统托盘与主窗口生命周期。
+    /// </summary>
+    public partial class App : Application
+    {
+        private Mutex _mutex;
+        private TrayIconService _trayIcon;
+        private Views.MainWindow _mainWindow;
+        private Views.SettingsWindow _settingsWindow;
+
+        protected override void OnStartup(StartupEventArgs e)
+        {
+            // 注册全局异常处理，记录日志，避免未处理异常导致程序静默崩溃。
+            DispatcherUnhandledException += OnDispatcherUnhandledException;
+            AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+
+            // 单实例控制：避免重复启动多个悬浮窗。
+            const string mutexName = "ClassEasy_SingleInstance";
+            _mutex = new Mutex(true, mutexName, out bool createdNew);
+            if (!createdNew)
+            {
+                MessageBox.Show("ClassEasy 已经在运行中。", "ClassEasy",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                Shutdown();
+                return;
+            }
+
+            // 加载配置并应用主题/字体。
+            var config = ConfigService.Load<AppConfig>(Paths.ConfigFile);
+            ThemeService.Apply(config);
+
+            base.OnStartup(e);
+
+            _mainWindow = new Views.MainWindow();
+            _mainWindow.Show();
+
+            _trayIcon = new TrayIconService(
+                showMainWindow: ShowMainWindow,
+                openSettings: OpenSettings,
+                exitApplication: ExitApplication);
+        }
+
+        private void OnDispatcherUnhandledException(object sender,
+            System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+        {
+            LogService.Error("未处理的 UI 线程异常", e.Exception);
+            e.Handled = true;
+        }
+
+        private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            LogService.Error("未处理的应用程序异常", e.ExceptionObject as Exception);
+        }
+
+        private void ShowMainWindow()
+        {
+            _mainWindow.Show();
+            _mainWindow.WindowState = WindowState.Normal;
+            _mainWindow.Activate();
+        }
+
+        private void OpenSettings()
+        {
+            if (_settingsWindow == null || !_settingsWindow.IsLoaded)
+            {
+                _settingsWindow = new Views.SettingsWindow { Owner = _mainWindow };
+                _settingsWindow.Saved += (sender, args) => _mainWindow.ViewModel.RefreshWeather();
+            }
+
+            _settingsWindow.Show();
+            _settingsWindow.Activate();
+        }
+
+        private void ExitApplication()
+        {
+            _trayIcon?.Dispose();
+            _trayIcon = null;
+            Shutdown();
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            _trayIcon?.Dispose();
+            if (_mutex != null)
+            {
+                _mutex.ReleaseMutex();
+                _mutex.Dispose();
+            }
+            base.OnExit(e);
+        }
+    }
+}

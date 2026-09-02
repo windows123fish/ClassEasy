@@ -1,0 +1,81 @@
+<Window x:Class="ClassEasy.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ClassEasy"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        FontFamily="{DynamicResource Font.AppFamily}"
+        Width="360"
+        Height="220"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+
+    <Border Background="{DynamicResource Brush.CardBackground}"
+            CornerRadius="16"
+            BorderBrush="{DynamicResource Brush.CardBorder}"
+            BorderThickness="1.5">
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0"
+                           Text="{Binding SchoolName}"
+                           FontSize="18"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource Brush.TitleText}"
+                           VerticalAlignment="Center" />
+
+                <TextBlock Grid.Column="1"
+                           Text="{Binding WeatherText}"
+                           FontSize="13"
+                           Foreground="{DynamicResource Brush.SecondaryText}"
+                           VerticalAlignment="Center" />
+            </Grid>
+
+            <TextBlock Grid.Row="1"
+                       Text="{Binding CurrentTime}"
+                       FontSize="{DynamicResource Double.TimeFontSize}"
+                       FontWeight="Bold"
+                       Foreground="{DynamicResource Brush.TimeText}"
+                       Margin="0,4,0,0" />
+
+            <Border Grid.Row="2"
+                    Background="{DynamicResource Brush.LessonCardBackground}"
+                    CornerRadius="10"
+                    Padding="12,8"
+                    Margin="0,14,0,0">
+                <StackPanel>
+                    <TextBlock Text="当前课程"
+                               FontSize="11"
+                               Foreground="{DynamicResource Brush.LessonCardLabel}" />
+                    <TextBlock Text="{Binding CurrentLessonText}"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource Brush.LessonCardText}"
+                               Margin="0,2,0,0" />
+                    <TextBlock Text="{Binding CurrentLessonDetail}"
+                               FontSize="12"
+                               Foreground="{DynamicResource Brush.LessonCardDetail}" />
+                </StackPanel>
+            </Border>
+
+            <TextBlock Grid.Row="3"
+                       Text="{Binding NextLessonText}"
+                       FontSize="13"
+                       Foreground="{DynamicResource Brush.SecondaryText}"
+                       Margin="0,12,0,0" />
+        </Grid>
+    </Border>
+</Window>
