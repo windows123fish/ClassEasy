@@ -33,7 +33,7 @@ namespace ClassEasy.ViewModels
             _timer.Start();
 
             Refresh();
-            RefreshWeatherAsync();
+            RefreshWeatherAsync().FireAndForget();
         }
 
         public string SchoolName => _config.SchoolName;
@@ -164,12 +164,12 @@ namespace ClassEasy.ViewModels
             // 每 30 分钟刷新一次天气。
             if ((DateTime.Now - _lastWeatherUpdate).TotalMinutes >= 30)
             {
-                RefreshWeatherAsync();
+                RefreshWeatherAsync().FireAndForget();
             }
         }
 
         /// <summary>异步获取天气，避免阻塞 UI 线程。</summary>
-        private async void RefreshWeatherAsync()
+        private async System.Threading.Tasks.Task RefreshWeatherAsync()
         {
             _lastWeatherUpdate = DateTime.Now;
 
@@ -181,8 +181,9 @@ namespace ClassEasy.ViewModels
                 WeatherText = string.Format("{0} {1}℃  {2}",
                     weather.Weather, weather.Temperature, weather.City);
             }
-            catch
+            catch (Exception ex)
             {
+                LogService.Error("天气获取失败", ex);
                 WeatherText = "天气获取失败";
             }
         }
@@ -190,7 +191,7 @@ namespace ClassEasy.ViewModels
         /// <summary>外部（设置窗口）可调用此方法立即刷新天气。</summary>
         public void RefreshWeather()
         {
-            RefreshWeatherAsync();
+            RefreshWeatherAsync().FireAndForget();
         }
 
         private static TimeSpan ParseTime(string time)

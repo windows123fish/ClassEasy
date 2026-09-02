@@ -51,13 +51,23 @@ namespace ClassEasy
         private void OnDispatcherUnhandledException(object sender,
             System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
         {
+            // 记录日志后标记为已处理，避免进程立即崩溃；
+            // 但记录下异常，便于诊断而非静默吞掉。
             LogService.Error("未处理的 UI 线程异常", e.Exception);
             e.Handled = true;
         }
 
         private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            LogService.Error("未处理的应用程序异常", e.ExceptionObject as Exception);
+            try
+            {
+                LogService.Error("未处理的应用程序异常（进程即将退出）",
+                    e.ExceptionObject as Exception);
+            }
+            catch
+            {
+                // 日志写入失败时静默忽略。
+            }
         }
 
         private void ShowMainWindow()

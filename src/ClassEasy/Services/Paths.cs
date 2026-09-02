@@ -11,8 +11,9 @@ namespace ClassEasy.Services
         private static string _dataDir;
 
         /// <summary>
-        /// 数据根目录。优先使用用户 AppDataRoaming，若系统返回空则依次回退到
-        /// LocalAppData、临时目录，避免因环境变量缺失导致在只读目录创建文件。
+        /// 数据根目录。通过“实际尝试创建目录”来探测第一个可写的位置，
+        /// 依次尝试 ApplicationData、LocalApplicationData、Temp、程序目录，
+        /// 避免在只读/被保护目录下创建文件导致 UnauthorizedAccessException。
         /// </summary>
         public static string DataDir
         {
@@ -28,20 +29,46 @@ namespace ClassEasy.Services
 
         private static string ResolveDataDir()
         {
-            var baseDir =
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-
-            if (string.IsNullOrWhiteSpace(baseDir))
+            string[] candidates =
             {
-                baseDir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                Path.GetTempPath()
+            };
+
+            foreach (var baseDir in candidates)
+            {
+                if (string.IsNullOrWhiteSpace(baseDir))
+                {
+                    continue;
+                }
+
+                var dir = Path.Combine(baseDir, "ClassEasy");
+                if (TryEnsureDirectory(dir))
+                {
+                    return dir;
+                }
             }
 
-            if (string.IsNullOrWhiteSpace(baseDir))
-            {
-                baseDir = Path.GetTempPath();
-            }
+            // 所有系统目录都不可写时，回退到程序所在目录，保证程序仍能运行。
+            var exeDir = Path.GetDirectoryName(typeof(Paths).Assembly.Location);
+            var fallback = Path.Combine(string.IsNullOrEmpty(exeDir) ? "." : exeDir, "ClassEasy");
+            TryEnsureDirectory(fallback);
+            return fallback;
+        }
 
-            return Path.Combine(baseDir, "ClassEasy");
+        /// <summary>尝试创建目录，成功返回 true，失败（权限/IO 异常）返回 false。</summary>
+        private static bool TryEnsureDirectory(string dir)
+        {
+            try
+            {
+                Directory.CreateDirectory(dir);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         /// <summary>课表数据文件路径。</summary>
