@@ -12,6 +12,9 @@ namespace ClassEasy.ViewModels
     /// </summary>
     public class MainViewModel : ViewModelBase
     {
+        private static readonly string[] WeekDays =
+            { "周日", "周一", "周二", "周三", "周四", "周五", "周六" };
+
         private readonly DispatcherTimer _timer;
         private readonly AppConfig _config;
         private readonly Schedule _schedule;
@@ -33,10 +36,75 @@ namespace ClassEasy.ViewModels
             _timer.Start();
 
             Refresh();
+            WindowOpacity = _config.WindowOpacity;
             RefreshWeatherAsync().FireAndForget();
         }
 
+        /// <summary>外部修改课表后调用：重新从磁盘加载并立即刷新。</summary>
+        public void ReloadSchedule()
+        {
+            var fresh = ConfigService.Load<Schedule>(Paths.ScheduleFile);
+            _schedule.Lessons = fresh.Lessons ?? new System.Collections.Generic.List<Lesson>();
+            Refresh();
+        }
+
         public string SchoolName => _config.SchoolName;
+
+        private double _windowOpacity;
+        /// <summary>主窗口透明度（0.3~1.0），供设置窗口实时预览绑定。</summary>
+        public double WindowOpacity
+        {
+            get => _windowOpacity;
+            set => SetProperty(ref _windowOpacity,
+                Math.Max(0.3, Math.Min(1.0, value)));
+        }
+
+        /// <summary>预览透明度（不保存），设置窗口拖动滑块时调用。
+        /// 预览值若用户点「取消」则调用 <see cref="RestoreOpacityFromConfig"/> 回滚。</summary>
+        public void PreviewOpacity(double value)
+        {
+            WindowOpacity = value;
+        }
+
+        /// <summary>将透明度写回配置对象（在设置保存时调用）。</summary>
+        public void CommitOpacityToConfig()
+        {
+            _config.WindowOpacity = WindowOpacity;
+        }
+
+        /// <summary>取消预览，回到配置中保存的值。</summary>
+        public void RestoreOpacityFromConfig()
+        {
+            WindowOpacity = _config.WindowOpacity;
+        }
+
+        private string _dateText = "";
+        public string DateText
+        {
+            get => _dateText;
+            set => SetProperty(ref _dateText, value);
+        }
+
+        private string _currentWeekText = "";
+        public string CurrentWeekText
+        {
+            get => _currentWeekText;
+            set => SetProperty(ref _currentWeekText, value);
+        }
+
+        private double _lessonProgress;
+        public double LessonProgress
+        {
+            get => _lessonProgress;
+            set => SetProperty(ref _lessonProgress, value);
+        }
+
+        private string _countdownText = "";
+        public string CountdownText
+        {
+            get => _countdownText;
+            set => SetProperty(ref _countdownText, value);
+        }
 
         private string _weatherText = "天气加载中…";
         public string WeatherText
@@ -122,9 +190,12 @@ namespace ClassEasy.ViewModels
         /// <summary>每秒刷新当前时间，并重新判断当前/下一节课程。</summary>
         private void Refresh()
         {
-            CurrentTime = DateTime.Now.ToString("HH:mm:ss");
+            var now = DateTime.Now;
+            CurrentTime = now.ToString("HH:mm:ss");
+            DateText = now.ToString("M月d日");
+            CurrentWeekText = WeekDays[(int)now.DayOfWeek];
 
-            var now = DateTime.Now.TimeOfDay;
+            var timeOfDay = now.TimeOfDay;
             var lessons = _schedule.Lessons
                 .OrderBy(l => ParseTime(l.StartTime))
                 .ToList();
@@ -138,7 +209,7 @@ namespace ClassEasy.ViewModels
                 var start = ParseTime(lesson.StartTime);
                 var end = ParseTime(lesson.EndTime);
 
-                if (now >= start && now < end)
+                if (timeOfDay >= start && timeOfDay < end)
                 {
                     current = lesson;
                     currentFound = true;
@@ -153,18 +224,54 @@ namespace ClassEasy.ViewModels
             }
 
             // 还未开始第一节时，把第一节当作下一节。
-            if (current == null && next == null && lessons.Count > 0 && now < ParseTime(lessons[0].StartTime))
+            if (current == null && next == null && lessons.Count > 0 && timeOfDay < ParseTime(lessons[0].StartTime))
             {
                 next = lessons[0];
             }
 
             CurrentLesson = current;
             NextLesson = next;
+            UpdateLessonProgress(current, timeOfDay);
 
             // 每 30 分钟刷新一次天气。
             if ((DateTime.Now - _lastWeatherUpdate).TotalMinutes >= 30)
             {
                 RefreshWeatherAsync().FireAndForget();
+            }
+        }
+
+        /// <summary>计算当前课程的进度（0~100）与下课倒计时。</summary>
+        private void UpdateLessonProgress(Lesson current, TimeSpan now)
+        {
+            if (current == null)
+            {
+                LessonProgress = 0;
+                CountdownText = "";
+                return;
+            }
+
+            var start = ParseTime(current.StartTime);
+            var end = ParseTime(current.EndTime);
+            var total = (end - start).TotalMinutes;
+            var elapsed = (now - start).TotalMinutes;
+
+            LessonProgress = total > 0
+                ? Math.Max(0, Math.Min(100, elapsed / total * 100))
+                : 0;
+
+            var remaining = end - now;
+            if (remaining.TotalMinutes < 0)
+            {
+                CountdownText = "已下课";
+            }
+            else if (remaining.TotalMinutes < 1)
+            {
+                CountdownText = "即将下课";
+            }
+            else
+            {
+                CountdownText = string.Format("{0} 分钟后下课",
+                    (int)Math.Ceiling(remaining.TotalMinutes));
             }
         }
 

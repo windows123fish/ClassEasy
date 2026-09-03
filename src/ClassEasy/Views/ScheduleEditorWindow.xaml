@@ -1,0 +1,196 @@
+<Window x:Class="ClassEasy.Views.ScheduleEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="课表编辑 — ClassEasy"
+        Width="620"
+        Height="460"
+        WindowStartupLocation="CenterScreen"
+        FontFamily="{DynamicResource Font.AppFamily}"
+        Background="{DynamicResource Brush.CardBackground}">
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- 顶部标题 + 工具条 -->
+        <DockPanel Grid.Row="0" LastChildFill="False">
+            <TextBlock DockPanel.Dock="Left"
+                       Text="课表编辑"
+                       FontSize="20"
+                       FontWeight="Bold"
+                       Foreground="{DynamicResource Brush.TitleText}"
+                       VerticalAlignment="Center" />
+
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Command="{Binding AddLessonCommand}"
+                        Width="72" Height="30" Margin="4,0"
+                        Content="新增"
+                        Background="{DynamicResource Brush.CardBorder}"
+                        Foreground="White"
+                        BorderThickness="0"
+                        FontSize="13" />
+                <Button Command="{Binding RemoveLessonCommand}"
+                        Width="72" Height="30" Margin="4,0"
+                        Content="删除"
+                        Background="#E53E3E"
+                        Foreground="White"
+                        BorderThickness="0"
+                        FontSize="13" />
+                <Button Command="{Binding MoveUpCommand}"
+                        Width="42" Height="30" Margin="4,0"
+                        Content="↑"
+                        FontSize="13" />
+                <Button Command="{Binding MoveDownCommand}"
+                        Width="42" Height="30" Margin="4,0"
+                        Content="↓"
+                        FontSize="13" />
+            </StackPanel>
+        </DockPanel>
+
+        <!-- 主体：左侧课程列表 + 右侧编辑区 -->
+        <Grid Grid.Row="1" Margin="0,14,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="240" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- 左侧：课程列表 -->
+            <ListBox Grid.Column="0"
+                     ItemsSource="{Binding Lessons}"
+                     SelectedItem="{Binding SelectedLesson}"
+                     BorderBrush="{DynamicResource Brush.CardBorder}"
+                     BorderThickness="1">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Margin="4,6">
+                            <TextBlock Text="{Binding Name}"
+                                       FontSize="14"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource Brush.TitleText}" />
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                <TextBlock Text="{Binding StartTime}"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource Brush.SecondaryText}" />
+                                <TextBlock Text="  -  "
+                                           FontSize="12"
+                                           Foreground="{DynamicResource Brush.SecondaryText}" />
+                                <TextBlock Text="{Binding EndTime}"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource Brush.SecondaryText}" />
+                                <TextBlock Text="   "
+                                           FontSize="12" />
+                                <TextBlock Text="{Binding Location}"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource Brush.LessonCardBackground}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- 右侧：编辑表单 -->
+            <Grid Grid.Column="2">
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <!-- 选中课程时启用，无选中时禁用（避免绑到空对象） -->
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding SelectedLesson}" Value="{x:Null}">
+                                <Setter Property="IsEnabled" Value="False" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0"
+                           Text="课程名称"
+                           FontSize="12"
+                           Foreground="{DynamicResource Brush.SecondaryText}" />
+                <TextBox Grid.Row="1"
+                         Text="{Binding SelectedLesson.Name, UpdateSourceTrigger=PropertyChanged}"
+                         FontSize="16"
+                         FontWeight="Bold"
+                         Foreground="{DynamicResource Brush.TitleText}"
+                         Padding="8,6"
+                         BorderBrush="{DynamicResource Brush.CardBorder}" />
+
+                <TextBlock Grid.Row="2"
+                           Text="授课教师"
+                           FontSize="12"
+                           Foreground="{DynamicResource Brush.SecondaryText}"
+                           Margin="0,12,0,0" />
+                <TextBox Grid.Row="3"
+                         Text="{Binding SelectedLesson.Teacher, UpdateSourceTrigger=PropertyChanged}"
+                         Padding="8,6"
+                         BorderBrush="{DynamicResource Brush.CardBorder}" />
+
+                <Grid Grid.Row="4" Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="开始时间"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource Brush.SecondaryText}" />
+                        <TextBox Text="{Binding SelectedLesson.StartTime, UpdateSourceTrigger=PropertyChanged}"
+                                 Padding="8,6"
+                                 BorderBrush="{DynamicResource Brush.CardBorder}" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="结束时间"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource Brush.SecondaryText}" />
+                        <TextBox Text="{Binding SelectedLesson.EndTime, UpdateSourceTrigger=PropertyChanged}"
+                                 Padding="8,6"
+                                 BorderBrush="{DynamicResource Brush.CardBorder}" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="4">
+                        <TextBlock Text="教室"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource Brush.SecondaryText}" />
+                        <TextBox Text="{Binding SelectedLesson.Location, UpdateSourceTrigger=PropertyChanged}"
+                                 Padding="8,6"
+                                 BorderBrush="{DynamicResource Brush.CardBorder}" />
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- 底部：保存按钮 -->
+        <DockPanel Grid.Row="2" Margin="0,16,0,0" LastChildFill="False">
+            <Button DockPanel.Dock="Right"
+                    Command="{Binding SaveCommand}"
+                    Content="保存课表"
+                    Background="{DynamicResource Brush.CardBorder}"
+                    Foreground="White"
+                    BorderThickness="0"
+                    Width="120" Height="36"
+                    FontSize="14"
+                    FontWeight="Bold" />
+            <TextBlock DockPanel.Dock="Left"
+                       Text="提示：保存后悬浮窗会立即刷新。"
+                       VerticalAlignment="Center"
+                       FontSize="12"
+                       Foreground="{DynamicResource Brush.SecondaryText}" />
+        </DockPanel>
+    </Grid>
+</Window>

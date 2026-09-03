@@ -15,12 +15,15 @@ namespace ClassEasy.Services
         private readonly NotifyIcon _notifyIcon;
         private readonly Action _showMainWindow;
         private readonly Action _openSettings;
+        private readonly Action _openScheduleEditor;
         private readonly Action _exitApplication;
 
-        public TrayIconService(Action showMainWindow, Action openSettings, Action exitApplication)
+        public TrayIconService(Action showMainWindow, Action openSettings,
+            Action openScheduleEditor, Action exitApplication)
         {
             _showMainWindow = showMainWindow;
             _openSettings = openSettings;
+            _openScheduleEditor = openScheduleEditor;
             _exitApplication = exitApplication;
 
             var menu = new ContextMenuStrip();
@@ -30,6 +33,10 @@ namespace ClassEasy.Services
             menu.Items.Add(showItem);
 
             menu.Items.Add(new ToolStripSeparator());
+
+            var scheduleItem = new ToolStripMenuItem("课表编辑");
+            scheduleItem.Click += (sender, args) => _openScheduleEditor();
+            menu.Items.Add(scheduleItem);
 
             var settingsItem = new ToolStripMenuItem("设置");
             settingsItem.Click += (sender, args) => _openSettings();

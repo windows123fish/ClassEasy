@@ -12,9 +12,11 @@ namespace ClassEasy
     public partial class App : Application
     {
         private Mutex _mutex;
+        private bool _ownsMutex;
         private TrayIconService _trayIcon;
         private Views.MainWindow _mainWindow;
         private Views.SettingsWindow _settingsWindow;
+        private Views.ScheduleEditorWindow _scheduleEditorWindow;
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -25,6 +27,7 @@ namespace ClassEasy
             // 单实例控制：避免重复启动多个悬浮窗。
             const string mutexName = "ClassEasy_SingleInstance";
             _mutex = new Mutex(true, mutexName, out bool createdNew);
+            _ownsMutex = createdNew;
             if (!createdNew)
             {
                 MessageBox.Show("ClassEasy 已经在运行中。", "ClassEasy",
@@ -45,6 +48,7 @@ namespace ClassEasy
             _trayIcon = new TrayIconService(
                 showMainWindow: ShowMainWindow,
                 openSettings: OpenSettings,
+                openScheduleEditor: OpenScheduleEditor,
                 exitApplication: ExitApplication);
         }
 
@@ -89,6 +93,18 @@ namespace ClassEasy
             _settingsWindow.Activate();
         }
 
+        private void OpenScheduleEditor()
+        {
+            if (_scheduleEditorWindow == null || !_scheduleEditorWindow.IsLoaded)
+            {
+                _scheduleEditorWindow = new Views.ScheduleEditorWindow { Owner = _mainWindow };
+                _scheduleEditorWindow.Saved += (sender, args) => _mainWindow.ViewModel.ReloadSchedule();
+            }
+
+            _scheduleEditorWindow.Show();
+            _scheduleEditorWindow.Activate();
+        }
+
         private void ExitApplication()
         {
             _trayIcon?.Dispose();
@@ -101,8 +117,21 @@ namespace ClassEasy
             _trayIcon?.Dispose();
             if (_mutex != null)
             {
-                _mutex.ReleaseMutex();
+                // 只有当前线程拥有所有权（createdNew=true）时才允许释放，
+                // 否则 ReleaseMutex 会抛 ApplicationException。
+                if (_ownsMutex)
+                {
+                    try
+                    {
+                        _mutex.ReleaseMutex();
+                    }
+                    catch (Exception ex)
+                    {
+                        LogService.Error("释放 Mutex 失败", ex);
+                    }
+                }
                 _mutex.Dispose();
+                _mutex = null;
             }
             base.OnExit(e);
         }

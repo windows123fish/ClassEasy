@@ -28,5 +28,8 @@ namespace ClassEasy.Models
 
         /// <summary>天气查询城市。</summary>
         public string City { get; set; } = "上海";
+
+        /// <summary>主窗口透明度（0.3 = 很淡  ~ 1.0 = 完全不透明）。</summary>
+        public double WindowOpacity { get; set; } = 0.92;
     }
 }

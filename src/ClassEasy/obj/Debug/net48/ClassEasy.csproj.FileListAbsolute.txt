@@ -17,3 +17,5 @@ D:\main\ClassEasy\src\ClassEasy\obj\Debug\net48\ClassEasy.pdb
 D:\main\ClassEasy\src\ClassEasy\obj\Debug\net48\Views\SettingsWindow.baml
 D:\main\ClassEasy\src\ClassEasy\obj\Debug\net48\App.baml
 D:\main\ClassEasy\src\ClassEasy\obj\Debug\net48\Views\SettingsWindow.g.cs
+D:\main\ClassEasy\src\ClassEasy\obj\Debug\net48\Views\ScheduleEditorWindow.baml
+D:\main\ClassEasy\src\ClassEasy\obj\Debug\net48\Views\ScheduleEditorWindow.g.cs
