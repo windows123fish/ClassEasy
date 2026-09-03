@@ -31,5 +31,12 @@ namespace ClassEasy.Models
 
         /// <summary>主窗口透明度（0.3 = 很淡  ~ 1.0 = 完全不透明）。</summary>
         public double WindowOpacity { get; set; } = 0.92;
+
+        /// <summary>窗口是否处于"点击穿透"模式（鼠标移到窗口上时点到后面的程序）。
+        /// 可通过托盘菜单或 Ctrl+Alt+T 切换。</summary>
+        public bool ClickThroughMode { get; set; } = false;
+
+        /// <summary>授时中心同步频率（分钟，5~120）。默认每 30 分钟同步一次国家授时中心。</summary>
+        public int NtpSyncIntervalMinutes { get; set; } = 30;
     }
 }

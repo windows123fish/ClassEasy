@@ -49,6 +49,8 @@ namespace ClassEasy
                 showMainWindow: ShowMainWindow,
                 openSettings: OpenSettings,
                 openScheduleEditor: OpenScheduleEditor,
+                setClickThrough: enable => _mainWindow.SetClickThrough(enable, persist: true),
+                getClickThrough: () => _mainWindow?.ViewModel?.IsClickThrough ?? false,
                 exitApplication: ExitApplication);
         }
 

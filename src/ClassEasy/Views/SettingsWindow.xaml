@@ -23,6 +23,22 @@
             <TextBlock x:Name="FontSizeValue" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="#4A6CF7" />
         </StackPanel>
 
+        <TextBlock Text="窗口透明度" FontWeight="Bold" Foreground="#2D3748" Margin="0,18,0,0" />
+        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+            <Slider x:Name="OpacitySlider" Minimum="0.30" Maximum="1.0" TickFrequency="0.05"
+                    IsSnapToTickEnabled="True" Width="250" VerticalAlignment="Center" />
+            <TextBlock x:Name="OpacityValue" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="#4A6CF7" />
+        </StackPanel>
+
+        <TextBlock Text="授时同步频率" FontWeight="Bold" Foreground="#2D3748" Margin="0,18,0,0" />
+        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+            <Slider x:Name="NtpIntervalSlider" Minimum="5" Maximum="120" TickFrequency="5"
+                    IsSnapToTickEnabled="True" Width="250" VerticalAlignment="Center" />
+            <TextBlock x:Name="NtpIntervalValue" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="#4A6CF7" />
+        </StackPanel>
+        <TextBlock x:Name="NtpStatusText" FontSize="12" Foreground="#718096" Margin="0,4,0,0"
+                   TextWrapping="Wrap" />
+
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
             <Button Content="取 消" Width="80" Padding="0,6" Click="Cancel_Click" />
             <Button Content="保 存" Width="80" Padding="0,6" Margin="10,0,0,0"

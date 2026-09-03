@@ -24,6 +24,12 @@ namespace ClassEasy.Services
             Write("ERROR", message, ex);
         }
 
+        /// <summary>记录非致命告警（例如 NTP 授时失败降级本地时间）。</summary>
+        public static void Warn(string message)
+        {
+            Write("WARN", message, null);
+        }
+
         private static void Write(string level, string message, Exception ex)
         {
             try
