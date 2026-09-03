@@ -1,0 +1,3 @@
+D:\ClassEasy-Release\ClassEasy.exe
+D:\ClassEasy-Release\ClassEasy.exe.config
+D:\ClassEasy-Release\ClassEasy.pdb

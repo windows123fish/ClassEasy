@@ -28,5 +28,8 @@ namespace ClassEasy.Models
 
         /// <summary>发布时间描述。</summary>
         public string ReportTime { get; set; }
+
+        /// <summary>实际使用的数据源（uapis / openmeteo），便于调试与显示。</summary>
+        public string Source { get; set; }
     }
 }

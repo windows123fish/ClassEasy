@@ -29,14 +29,14 @@ namespace ClassEasy.Views
         /// 因为 WS_EX_TRANSPARENT 穿透态下 WPF 收不到 Mouse 路由事件，必须自己轮询。</summary>
         private readonly DispatcherTimer _hoverPollingTimer;
 
+        /// <summary>Ctrl+Alt+T 切换手动点击穿透模式用的 RoutedCommand（由 XAML 的 KeyBinding 引用）。</summary>
+        public static readonly RoutedCommand ToggleClickThroughCommand = new RoutedCommand();
+
         public MainWindow()
         {
             InitializeComponent();
             ViewModel = new MainViewModel();
             DataContext = ViewModel;
-
-            // 快捷键 Ctrl+Alt+T → 切换手动穿透模式并持久化
-            ToggleThroughBinding.Command = new RelayCommand(_ => ToggleClickThroughAndPersist());
 
             // 穿透模式状态变化（手动穿透 / 悬停穿透任一变化）→ 真正改写 Win32 窗口扩展样式
             ViewModel.ClickThroughChanged += (sender, args) =>
@@ -69,29 +69,35 @@ namespace ClassEasy.Views
             SystemEvents.DisplaySettingsChanged += (sender, args) => RepositionToTop();
         }
 
-        /// <summary>WPF 窗口句柄就绪后：首次定位 + 同步初始穿透样式。</summary>
+        /// <summary>WPF 窗口句柄就绪后：首次定位 + 同步初始穿透样式 + 从 Alt+Tab 列表中剔除 + 开启磨砂背景。</summary>
         private void Window_SourceInitialized(object sender, EventArgs e)
         {
             RepositionToTop();
             bool shouldThrough = ViewModel.IsClickThrough || ViewModel.HoverClickThrough;
             Win32WindowHelper.SetClickThrough(this, shouldThrough);
+            // 桌面悬浮工具窗口：Alt+Tab 不显示、任务栏也无按钮
+            Win32WindowHelper.HideFromAltTab(this);
+            // Win11 系统磨砂玻璃背景（Win7-10 调用失败自动忽略，回退到 XAML 渐变）
+            Win32WindowHelper.EnableAcrylicBackdrop(this);
         }
 
-        /// <summary>把窗口放到屏幕顶部正中央。</summary>
+        /// <summary>把窗口按内容自适应大小，水平居中显示在屏幕顶部。</summary>
         private void RepositionToTop()
         {
             var workArea = SystemParameters.WorkArea;
 
-            const double widthRatio = 0.92;
-            const double minWidth = 960;
-            const double maxWidth = 1800;
+            // 让窗口大小完全由内容决定（按 Auto）
+            SizeToContent = SizeToContent.WidthAndHeight;
 
-            double targetWidth = workArea.Width * widthRatio;
-            targetWidth = Math.Max(minWidth, Math.Min(maxWidth, targetWidth));
-
-            Width = targetWidth;
-            Left = workArea.Left + (workArea.Width - targetWidth) * 0.5;
-            Top = workArea.Top + 4;
+            // 等 WPF 测量完内容后取 ActualWidth/Height 居中
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                double w = ActualWidth > 0 ? ActualWidth : 800;
+                Top = workArea.Top + 4;
+                Left = workArea.Left + (workArea.Width - w) * 0.5;
+                // 居中后取消 SizeToContent，防止屏幕变化时再触发
+                SizeToContent = SizeToContent.Manual;
+            }), DispatcherPriority.Loaded);
         }
 
         /// <summary>切换手动穿透模式并把新值写进 config.xml。</summary>
@@ -171,5 +177,11 @@ namespace ClassEasy.Views
 
         /// <summary>外部调用：把窗口恢复到屏幕顶部正中央。</summary>
         public void ResetPosition() => RepositionToTop();
+
+        /// <summary>Ctrl+Alt+T 快捷键入口（由 XAML 的 CommandBinding 调用）。</summary>
+        private void OnToggleClickThroughExecuted(object sender, ExecutedRoutedEventArgs e)
+        {
+            ToggleClickThroughAndPersist();
+        }
     }
 }

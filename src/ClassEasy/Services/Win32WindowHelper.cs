@@ -14,8 +14,10 @@ namespace ClassEasy.Services
         // ---- user32.dll 常量与签名 ----
         private const int GWL_EXSTYLE = -20;
 
-        private const uint WS_EX_LAYERED     = 0x00080000;
-        private const uint WS_EX_TRANSPARENT = 0x00000020;
+        private const uint WS_EX_LAYERED      = 0x00080000; // 分层窗口（透明/亚克力/异形必备）
+        private const uint WS_EX_TRANSPARENT  = 0x00000020; // 点击穿透
+        private const uint WS_EX_TOOLWINDOW   = 0x00000080; // Alt+Tab 不显示（工具窗口）
+        private const uint WS_EX_APPWINDOW    = 0x00040000; // Alt+Tab 强制显示（与此相反）
 
         [Flags]
         private enum SetWindowPosFlags : uint
@@ -146,6 +148,91 @@ namespace ClassEasy.Services
                 | SetWindowPosFlags.SWP_NOZORDER
                 | SetWindowPosFlags.SWP_NOACTIVATE
                 | SetWindowPosFlags.SWP_FRAMECHANGED);
+        }
+
+        /// <summary>
+        /// 把窗口从 Alt+Tab 切换列表里剔除，任务栏也不出现按钮，
+        /// 变成「桌面悬浮小工具」的样式。
+        /// 机制：GWL_EXSTYLE 中去掉 WS_EX_APPWINDOW、加上 WS_EX_TOOLWINDOW。
+        /// 注意：必须在窗口 SourceInitialized 之后（句柄已创建）调用才生效。
+        /// </summary>
+        public static void HideFromAltTab(Window window)
+        {
+            if (window == null) throw new ArgumentNullException(nameof(window));
+
+            var helper = new WindowInteropHelper(window);
+            if (helper.Handle == IntPtr.Zero) helper.EnsureHandle();
+            IntPtr hWnd = helper.Handle;
+
+            uint style = GetWindowExStyle(hWnd);
+            uint newStyle = (style | WS_EX_TOOLWINDOW | WS_EX_LAYERED) & ~WS_EX_APPWINDOW;
+
+            if (newStyle != style)
+            {
+                SetWindowExStyle(hWnd, newStyle);
+            }
+
+            // 通知系统重新计算非客户区 / Alt+Tab 枚举缓存
+            SetWindowPos(hWnd, IntPtr.Zero, 0, 0, 0, 0,
+                SetWindowPosFlags.SWP_NOMOVE
+                | SetWindowPosFlags.SWP_NOSIZE
+                | SetWindowPosFlags.SWP_NOZORDER
+                | SetWindowPosFlags.SWP_NOACTIVATE
+                | SetWindowPosFlags.SWP_FRAMECHANGED);
+        }
+
+        // ---- DWM 磨砂背景（Win11 build 22000+） ----
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MARGINS
+        {
+            public int cxLeftWidth;
+            public int cxRightWidth;
+            public int cyTopHeight;
+            public int cyBottomHeight;
+        }
+
+        [DllImport("dwmapi.dll", PreserveSig = true)]
+        private static extern int DwmSetWindowAttribute(IntPtr hWnd, int dwAttribute, ref int pvAttribute, int cbAttribute);
+
+        [DllImport("dwmapi.dll", PreserveSig = true)]
+        private static extern int DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS pMarInset);
+
+        // DWMWA_SYSTEMBACKDROP_TYPE = 38（Win11 22000+ 引入）
+        private const int DWMWA_SYSTEMBACKDROP_TYPE = 38;
+        private const int DWMSBT_AUTO              = 0;
+        private const int DWMSBT_NONE              = 1;
+        private const int DWMSBT_MAINWINDOW        = 2;  // Mica
+        private const int DWMSBT_TRANSIENTWINDOW   = 3;  // Acrylic（最接近"磨砂玻璃"）
+        private const int DWMSBT_TABBEDWINDOW      = 4;
+
+        /// <summary>
+        /// 开启 Windows 11 系统的"磨砂玻璃 / Acrylic"窗口背景。
+        /// 机制：调用 dwmapi!DwmSetWindowAttribute 设置 DWMWA_SYSTEMBACKDROP_TYPE=Acrylic，
+        ///       并 DwmExtendFrameIntoClientArea 把 DWM 框架扩展到整个客户区，让系统特效透出来。
+        /// 兼容性：仅 Win11 22000+ 有效；旧系统调用会失败但不会崩溃，自动回退到 XAML 里的渐变。
+        /// 注意：必须在窗口 SourceInitialized 之后（句柄已创建）调用才生效。
+        /// </summary>
+        public static void EnableAcrylicBackdrop(Window window)
+        {
+            if (window == null) return;
+            var helper = new WindowInteropHelper(window);
+            if (helper.Handle == IntPtr.Zero) helper.EnsureHandle();
+            IntPtr hWnd = helper.Handle;
+
+            // 1) 把 DWM 框架扩展到整个客户区（-1 = 全占）
+            var margins = new MARGINS
+            {
+                cxLeftWidth = -1,
+                cxRightWidth = -1,
+                cyTopHeight = -1,
+                cyBottomHeight = -1
+            };
+            DwmExtendFrameIntoClientArea(hWnd, ref margins);
+
+            // 2) 背景类型 = Acrylic（磨砂）
+            int useAcrylic = DWMSBT_TRANSIENTWINDOW;
+            DwmSetWindowAttribute(hWnd, DWMWA_SYSTEMBACKDROP_TYPE, ref useAcrylic, sizeof(int));
         }
     }
 }

@@ -2,223 +2,141 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:ClassEasy.Views"
+        xmlns:vm="clr-namespace:ClassEasy.ViewModels"
         Title="ClassEasy"
         WindowStyle="None"
+        ResizeMode="NoResize"
         AllowsTransparency="True"
         Background="Transparent"
-        ResizeMode="NoResize"
-        ShowInTaskbar="False"
         Topmost="True"
+        ShowInTaskbar="False"
         WindowStartupLocation="Manual"
-        FontFamily="{DynamicResource Font.AppFamily}"
-        Height="76"
-        Opacity="{Binding EffectiveOpacity, Mode=OneWay}"
+        SizeToContent="WidthAndHeight"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+        mc:Ignorable="d"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         SourceInitialized="Window_SourceInitialized"
         MouseEnter="Window_MouseEnter"
         MouseLeave="Window_MouseLeave"
         MouseLeftButtonDown="Window_MouseLeftButtonDown">
 
     <Window.InputBindings>
-        <!-- 全局快捷键：Ctrl+Alt+T 切换"点击穿透"模式（T = Transparent/Through） -->
-        <KeyBinding x:Name="ToggleThroughBinding"
-                    Key="T"
-                    Modifiers="Ctrl+Alt" />
+        <KeyBinding Key="T" Modifiers="Ctrl+Alt" Command="local:MainWindow.ToggleClickThroughCommand" />
     </Window.InputBindings>
 
+    <Window.CommandBindings>
+        <CommandBinding Command="local:MainWindow.ToggleClickThroughCommand" Executed="OnToggleClickThroughExecuted" />
+    </Window.CommandBindings>
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <local:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
+        <local:StringToVisibilityConverter x:Key="StringToVis" />
+    </Window.Resources>
+
+    <!--
+        磨砂玻璃质感顶栏
+        1) Win11 走 DWM Acrylic 系统特效（最正点的"磨砂"，自动启用）
+        2) Win7-10 / 失败时回退：半透明白渐变 + 淡描边，自己也能看出"磨砂"感
+        渐变故意压得偏淡，让系统 Acrylic 透出来；旧系统上没有系统特效，仅靠透明度也能凑合。
+    -->
     <Border x:Name="RootBorder"
-            Background="{DynamicResource Brush.CardBackground}"
-            CornerRadius="16"
-            BorderBrush="{DynamicResource Brush.CardBorder}"
-            BorderThickness="1.5"
-            SnapsToDevicePixels="True">
-        <Border.Effect>
-            <DropShadowEffect BlurRadius="20"
-                              ShadowDepth="0"
-                              Opacity="0.28"
-                              Color="#000000" />
-        </Border.Effect>
+            BorderBrush="#60C8CED5"
+            BorderThickness="1"
+            CornerRadius="0"
+            Padding="14,8"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            Background="{Binding BackdropBrush}">
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
 
-        <!-- 横排 5 列顶栏：时间 | 日期信息 | 当前课（含进度条） | 下一课 | 天气 -->
-        <Grid Margin="18,0" VerticalAlignment="Center">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="18" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="18" />
-                <ColumnDefinition Width="*" MinWidth="320" />
-                <ColumnDefinition Width="16" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="18" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
+            <!-- 1. 星期 -->
+            <TextBlock Text="{Binding CurrentWeekText}"
+                       FontSize="22"
+                       FontWeight="Bold"
+                       Foreground="Black"
+                       VerticalAlignment="Center" />
 
-            <!-- 列 0：时间（大字号） -->
-            <Border Grid.Column="0"
-                    Background="{DynamicResource Brush.LessonCardBackground}"
-                    CornerRadius="12"
-                    Padding="12,6"
-                    VerticalAlignment="Center"
-                    MinWidth="132">
-                <TextBlock Text="{Binding CurrentTime}"
-                           FontSize="{DynamicResource Double.TimeFontSize}"
+            <TextBlock Text=" | " FontSize="22" Foreground="#9099A3" VerticalAlignment="Center" />
+
+            <!-- 2. 日期 09/03 -->
+            <TextBlock Text="{Binding DateText}"
+                       FontSize="22"
+                       FontWeight="Bold"
+                       Foreground="Black"
+                       VerticalAlignment="Center" />
+
+            <!-- 节假日（如 国庆节），无节日时不占空间 -->
+            <TextBlock Text="{Binding HolidayText}"
+                       FontSize="14"
+                       FontWeight="SemiBold"
+                       Foreground="#E53E3E"
+                       VerticalAlignment="Center"
+                       Margin="4,0,0,0"
+                       Visibility="{Binding HolidayText, Converter={StaticResource StringToVis}}" />
+
+            <!-- 当前课段：有课时显示，无课时整段隐藏 -->
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                        Visibility="{Binding IsCurrentLessonEmpty, Converter={StaticResource InverseBoolToVis}}">
+                <TextBlock Text=" | " FontSize="22" Foreground="#9099A3" VerticalAlignment="Center" />
+                <TextBlock Text="当前：" FontSize="14" Foreground="#5C6672" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding CurrentLessonText}"
+                           FontSize="16"
                            FontWeight="Bold"
-                           Foreground="{DynamicResource Brush.LessonCardText}"
+                           Foreground="Black"
                            VerticalAlignment="Center"
-                           HorizontalAlignment="Center" />
-            </Border>
-
-            <!-- 列 2：日期 + 星期 + 学校名 -->
-            <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="{Binding DateText}"
-                               FontSize="13"
-                               FontWeight="SemiBold"
-                               Foreground="{DynamicResource Brush.TitleText}" />
-                    <TextBlock Text="  ·  "
-                               FontSize="13"
-                               Foreground="{DynamicResource Brush.SecondaryText}" />
-                    <TextBlock Text="{Binding CurrentWeekText}"
-                               FontSize="13"
-                               Foreground="{DynamicResource Brush.SecondaryText}" />
-                </StackPanel>
-                <TextBlock Text="{Binding SchoolName}"
-                           FontSize="12"
-                           Foreground="{DynamicResource Brush.SecondaryText}"
-                           Margin="0,2,0,0" />
+                           TextTrimming="CharacterEllipsis"
+                           MaxWidth="240" />
             </StackPanel>
 
-            <!-- 列 4：当前课程（占满剩余空间，适配分辨率） -->
-            <Border Grid.Column="4"
-                    Background="{DynamicResource Brush.LessonCardBackground}"
-                    CornerRadius="12"
-                    Padding="14,8"
-                    VerticalAlignment="Stretch"
-                    MinWidth="320">
-                <Grid VerticalAlignment="Center">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
+            <!-- 下一节段：有课时显示，无课时整段隐藏 -->
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                        Visibility="{Binding IsNextLessonEmpty, Converter={StaticResource InverseBoolToVis}}">
+                <TextBlock Text=" | " FontSize="22" Foreground="#9099A3" VerticalAlignment="Center" />
+                <TextBlock Text="下一节：" FontSize="14" Foreground="#5C6672" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding NextLessonName}"
+                           FontSize="16"
+                           FontWeight="Bold"
+                           Foreground="Black"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"
+                           MaxWidth="200" />
+            </StackPanel>
 
-                    <Grid Grid.Row="0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
+            <TextBlock Text=" | " FontSize="22" Foreground="#9099A3" VerticalAlignment="Center" />
 
-                        <TextBlock Grid.Column="0"
-                                   Text="{Binding CurrentLessonText}"
-                                   FontSize="18"
-                                   FontWeight="Bold"
-                                   Foreground="{DynamicResource Brush.LessonCardText}"
-                                   TextTrimming="CharacterEllipsis" />
-                        <TextBlock Grid.Column="1"
-                                   Text="{Binding CountdownText}"
-                                   FontSize="12"
-                                   Foreground="{DynamicResource Brush.LessonCardDetail}"
-                                   VerticalAlignment="Center"
-                                   Margin="10,0,0,0" />
-                    </Grid>
+            <!-- 5. 大电子钟（黑字粗体） -->
+            <TextBlock Text="{Binding CurrentTime}"
+                       FontSize="32"
+                       FontWeight="Bold"
+                       FontFamily="Consolas,Microsoft YaHei UI"
+                       Foreground="Black"
+                       VerticalAlignment="Center" />
 
-                    <Grid Grid.Row="1" Margin="0,4,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
+            <TextBlock Text=" | " FontSize="22" Foreground="#9099A3" VerticalAlignment="Center" />
 
-                        <ProgressBar Grid.Column="0"
-                                     Height="5"
-                                     Minimum="0"
-                                     Maximum="100"
-                                     Value="{Binding LessonProgress}"
-                                     BorderThickness="0"
-                                     Foreground="{DynamicResource Brush.LessonCardText}"
-                                     Background="#33FFFFFF"
-                                     VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="1"
-                                   Text="{Binding CurrentLessonDetail}"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource Brush.LessonCardDetail}"
-                                   VerticalAlignment="Center"
-                                   Margin="10,0,0,0"
-                                   TextTrimming="CharacterEllipsis" />
-                    </Grid>
-                </Grid>
-            </Border>
+            <!-- 6. 天气 -->
+            <TextBlock Text="☀ "
+                       FontSize="16"
+                       Foreground="#F5A623"
+                       VerticalAlignment="Center" />
+            <TextBlock Text="{Binding WeatherText}"
+                       FontSize="14"
+                       Foreground="Black"
+                       VerticalAlignment="Center" />
 
-            <!-- 列 6：下一节课 -->
-            <Grid Grid.Column="6" VerticalAlignment="Center">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+            <TextBlock Text=" | " FontSize="22" Foreground="#9099A3" VerticalAlignment="Center" />
 
-                <Border Grid.Column="0"
-                        Background="{DynamicResource Brush.CardBorder}"
-                        CornerRadius="3"
-                        Width="3"
-                        Height="40"
-                        VerticalAlignment="Center"
-                        Opacity="0.6" />
-                <StackPanel Grid.Column="1" Margin="8,0,0,0" MaxWidth="180">
-                    <TextBlock Text="{Binding NextLessonText}"
-                               FontSize="12"
-                               Foreground="{DynamicResource Brush.SecondaryText}"
-                               TextWrapping="NoWrap"
-                               TextTrimming="CharacterEllipsis" />
-                </StackPanel>
-            </Grid>
+            <!-- 7. 授时状态 -->
+            <TextBlock Text="{Binding ClockStatusText}"
+                       FontSize="12"
+                       FontWeight="SemiBold"
+                       Foreground="Black"
+                       VerticalAlignment="Center" />
 
-            <!-- 列 8：天气 + 授时状态 -->
-            <Grid Grid.Column="8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="6" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-
-                <Border Grid.Column="0"
-                        Background="{DynamicResource Brush.CardBorder}"
-                        CornerRadius="10"
-                        Padding="10,6"
-                        VerticalAlignment="Center"
-                        Opacity="0.92"
-                        MinWidth="96">
-                    <TextBlock Text="{Binding WeatherText}"
-                               FontSize="12"
-                               Foreground="White"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"
-                               TextTrimming="CharacterEllipsis"
-                               MaxWidth="160" />
-                </Border>
-
-                <!-- 授时状态胶囊：同步成功=绿色✓，失败/本地时间=橙红色⚠ -->
-                <Border Grid.Column="2"
-                        VerticalAlignment="Center"
-                        Padding="6,5"
-                        CornerRadius="8"
-                        MinWidth="78"
-                        ToolTip="时间来源：国家授时中心 NTP（ntp.ntsc.ac.cn），失败回退本地系统时间">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Setter Property="Background" Value="#2F85E04D" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding ClockStatusText, Converter={x:Static local:ClockStatusToIsLocalConverter.Instance}}"
-                                             Value="True">
-                                    <Setter Property="Background" Value="#3FDD6B20" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
-                    <TextBlock Text="{Binding ClockStatusText}"
-                               FontSize="11"
-                               Foreground="White"
-                               FontWeight="SemiBold"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center" />
-                </Border>
-            </Grid>
-        </Grid>
+        </StackPanel>
     </Border>
 </Window>

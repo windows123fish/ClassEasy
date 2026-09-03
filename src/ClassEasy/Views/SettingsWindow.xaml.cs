@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Windows;
 using ClassEasy.Models;
 using ClassEasy.Services;
@@ -12,6 +13,7 @@ namespace ClassEasy.Views
     {
         private readonly AppConfig _config;
         private readonly ViewModels.MainViewModel _mainVm;
+        private bool _devModeToggledByUser; // 用户本次会话中是否切换过 dev 模式
 
         /// <summary>保存成功后触发，用于通知主窗口刷新（如天气城市变更）。</summary>
         public event EventHandler Saved;
@@ -31,20 +33,35 @@ namespace ClassEasy.Views
             ThemeCombo.ItemsSource = ThemeService.Themes;
             ThemeCombo.DisplayMemberPath = "Name";
             FontCombo.ItemsSource = ThemeService.FontFamilies;
+            WeatherSourceCombo.ItemsSource = new[] { "uapis", "openmeteo" };
 
             CityBox.Text = _config.City;
+            WeatherSourceCombo.SelectedItem = string.IsNullOrEmpty(_config.WeatherSource) ? "uapis" : _config.WeatherSource;
             ThemeCombo.SelectedItem = ThemeService.FindTheme(_config.Theme);
             FontCombo.SelectedItem = _config.FontFamily;
             FontSizeSlider.Value = _config.TimeFontSize;
-            OpacitySlider.Value = _config.WindowOpacity;
-            NtpIntervalSlider.Value = Math.Max(5, Math.Min(120, _config.NtpSyncIntervalMinutes));
+            BackdropSlider.Value = _config.BackdropOpacity;
+            NtpIntervalSlider.Value = Math.Max(1, Math.Min(120, _config.NtpSyncIntervalMinutes));
 
             UpdateFontSizeText();
-            UpdateOpacityText();
+            UpdateBackdropText();
             UpdateNtpIntervalText();
             FontSizeSlider.ValueChanged += (sender, args) => UpdateFontSizeText();
             NtpIntervalSlider.ValueChanged += (sender, args) => UpdateNtpIntervalText();
-            OpacitySlider.ValueChanged += OpacitySlider_ValueChanged;
+            BackdropSlider.ValueChanged += BackdropSlider_ValueChanged;
+
+            // 高级设置面板：仅在 config 已开启 dev 模式时显示
+            AdvancedSection.Visibility = _config.DevMode ? Visibility.Visible : Visibility.Collapsed;
+            CustomNtpBox.Text = _config.CustomNtpServers ?? "";
+            LogLevelCombo.ItemsSource = new[] { "Info", "Warning", "Error" };
+            LogLevelCombo.SelectedItem = string.IsNullOrEmpty(_config.LogLevel) ? "Info" : _config.LogLevel;
+
+            // dev 模式开关初始化（注意：放在 AdvancedSection 设置之后，避免 Checked 事件被误触发）
+            DevModeCheck.IsChecked = _config.DevMode;
+
+            // 普通功能开关
+            ShowHolidayCheck.IsChecked = _config.ShowHoliday;
+            AutoStartCheck.IsChecked = AutoStartService.IsEnabled();
 
             // 展示当前授时来源和最后成功的服务器（只读信息）
             UpdateNtpStatus();
@@ -71,28 +88,76 @@ namespace ClassEasy.Views
                 NtpStatusText.Text = "当前：" + src + "  （启动后首次同步可能需要几秒钟）";
             }
         }
-        }
 
         private void UpdateFontSizeText()
         {
             FontSizeValue.Text = Math.Round(FontSizeSlider.Value) + " px";
         }
 
-        private void UpdateOpacityText()
+        private void UpdateBackdropText()
         {
-            // 对象存在性保护：XAML 加载/卸载期间任一未就绪就安全跳过，不抢跑。
-            if (OpacityValue == null) return;
-            OpacityValue.Text = Math.Round(OpacitySlider.Value * 100, 0) + " %";
+            if (BackdropValue == null) return;
+            BackdropValue.Text = Math.Round(BackdropSlider.Value * 100, 0) + " %";
         }
 
-        /// <summary>拖动透明度滑块：实时预览主窗口透明度。</summary>
-        private void OpacitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        /// <summary>拖动磨砂背景透明度滑块：实时预览主窗口磨砂效果。</summary>
+        private void BackdropSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            // 双保险：InitializeComponent 过程中理论上已不会走到这里（事件在后面订阅），
-            // 仍保留空判以防未来有人把事件移回 XAML。
-            if (OpacityValue == null || OpacitySlider == null) return;
-            UpdateOpacityText();
-            _mainVm?.PreviewOpacity(OpacitySlider.Value);
+            if (BackdropValue == null || BackdropSlider == null) return;
+            UpdateBackdropText();
+            if (_mainVm != null) _mainVm.BackdropOpacity = BackdropSlider.Value;
+        }
+
+        /// <summary>用户切换"开发者模式"开关：立即写入 config，弹窗询问是否立即重启。
+        /// 重启后 dev 模式才会真正生效。</summary>
+        private void DevModeCheck_Changed(object sender, RoutedEventArgs e)
+        {
+            bool isChecked = DevModeCheck.IsChecked == true;
+            bool changed = (_config.DevMode != isChecked);
+            _devModeToggledByUser = changed;
+
+            if (changed)
+            {
+                // 先保存，再问是否立即重启（保证新进程启动时配置已落盘）
+                _config.DevMode = isChecked;
+                try
+                {
+                    ConfigService.Save(Paths.ConfigFile, _config);
+                }
+                catch (Exception ex)
+                {
+                    LogService.Error("保存开发者模式开关失败", ex);
+                }
+
+                string action = isChecked ? "开启" : "关闭";
+                var result = MessageBox.Show(
+                    $"开发者模式已{action}，需要重启 ClassEasy 才会生效。\n是否立即重启？",
+                    "ClassEasy",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    // 启动新进程 + Shutdown 自己（SettingsWindow 随 App 一起退出，无需手动 Close）
+                    var app = Application.Current as App;
+                    app?.Restart();
+                    return;
+                }
+
+                // 用户拒绝立即重启：显示提示，让用户自己挑时机重启
+                DevModeWarning.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                DevModeWarning.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        /// <summary>强制刷新天气（开发者模式专用按钮）。</summary>
+        private void ForceRefreshWeather_Click(object sender, RoutedEventArgs e)
+        {
+            _mainVm?.RefreshWeather();
+            UpdateNtpStatus();
         }
 
         private void Save_Click(object sender, RoutedEventArgs e)
@@ -104,10 +169,11 @@ namespace ClassEasy.Views
                 _config.Theme = theme?.Name ?? "蓝色";
                 _config.FontFamily = FontCombo.SelectedItem?.ToString() ?? "Microsoft YaHei UI";
                 _config.TimeFontSize = FontSizeSlider.Value;
-                _config.WindowOpacity = OpacitySlider.Value;
+                _config.BackdropOpacity = BackdropSlider.Value;
                 _config.NtpSyncIntervalMinutes = (int)Math.Round(NtpIntervalSlider.Value, 0);
-
-                _mainVm?.CommitOpacityToConfig();
+                // 高级设置（dev 模式专属），即使面板不可见也安全写入
+                _config.CustomNtpServers = CustomNtpBox?.Text ?? "";
+                _config.LogLevel = (LogLevelCombo?.SelectedItem as string) ?? "Info";
 
                 ConfigService.Save(Paths.ConfigFile, _config);
                 ThemeService.Apply(_config);
@@ -122,16 +188,14 @@ namespace ClassEasy.Views
             }
             finally
             {
-                // 设置窗口通过 Show() 非模态打开，必须用 Close 关闭，
-                // 不能设置 DialogResult（会抛 InvalidOperationException 导致崩溃）。
-                Close();
+                // 设置窗口保持打开，方便用户继续调整；点击右上角 X 或「取消」再关闭。
             }
         }
 
         private void Cancel_Click(object sender, RoutedEventArgs e)
         {
-            // 用户取消：透明度预览回滚到上次保存值，其他主题/字体/城市未保存过本来就不会生效。
-            _mainVm?.RestoreOpacityFromConfig();
+            // 用户取消：磨砂背景透明度预览回滚到上次保存值。
+            if (_mainVm != null) _mainVm.BackdropOpacity = _config.BackdropOpacity;
             Close();
         }
     }

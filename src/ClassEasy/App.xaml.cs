@@ -114,6 +114,41 @@ namespace ClassEasy
             Shutdown();
         }
 
+        /// <summary>
+        /// 重启当前进程：先释放单例 Mutex 让新进程能拿到所有权，再启动新进程，最后 Shutdown 当前进程。
+        /// 用于"开发者模式"等需要重启才生效的设置。
+        /// </summary>
+        public void Restart()
+        {
+            try
+            {
+                // 1) 主动释放 Mutex（必须在启动新进程之前），否则新进程会因拿不到 mutex 而退出
+                if (_mutex != null && _ownsMutex)
+                {
+                    try { _mutex.ReleaseMutex(); }
+                    catch (Exception ex) { LogService.Warn("重启时释放 Mutex 失败：" + ex.Message); }
+                    _ownsMutex = false;
+                }
+
+                // 2) 启动新进程（用当前 exe 路径；Environment.ProcessPath 兼容 .NET 4.8 通过 MainModule 取）
+                var exe = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName;
+                if (!string.IsNullOrEmpty(exe))
+                {
+                    System.Diagnostics.Process.Start(exe);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogService.Error("自动重启失败，请手动重启 ClassEasy", ex);
+                MessageBox.Show("自动重启失败：" + ex.Message + "\n请手动退出后重新启动。",
+                    "ClassEasy", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // 3) 关闭当前进程
+            Shutdown();
+        }
+
         protected override void OnExit(ExitEventArgs e)
         {
             _trayIcon?.Dispose();

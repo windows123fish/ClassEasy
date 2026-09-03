@@ -38,6 +38,13 @@ namespace ClassEasy.Services
         {
             new ThemeDefinition
             {
+                Name = "淡白", CardBackground = "#F5F8F9FB", CardBorder = "#BFD8DEE7",
+                TitleText = "#1A1A1A", TimeText = "#2C5FD5",
+                LessonCardBackground = "#FFECEEF2", LessonCardLabel = "#4A6CF7",
+                LessonCardText = "#111111", LessonCardDetail = "#4A5568", SecondaryText = "#5C6672"
+            },
+            new ThemeDefinition
+            {
                 Name = "蓝色", CardBackground = "#F2FFFFFF", CardBorder = "#DD4A6CF7",
                 TitleText = "#2D3748", TimeText = "#4A6CF7",
                 LessonCardBackground = "#334A6CF7", LessonCardLabel = "#8899DD",

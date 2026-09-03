@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\main\\ClassEasy\\src\\ClassEasy\\ClassEasy.csproj": {}
+    "d:\\main\\ClassEasy\\src\\ClassEasy\\ClassEasy.csproj": {}
   },
   "projects": {
-    "D:\\main\\ClassEasy\\src\\ClassEasy\\ClassEasy.csproj": {
+    "d:\\main\\ClassEasy\\src\\ClassEasy\\ClassEasy.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\main\\ClassEasy\\src\\ClassEasy\\ClassEasy.csproj",
+        "projectUniqueName": "d:\\main\\ClassEasy\\src\\ClassEasy\\ClassEasy.csproj",
         "projectName": "ClassEasy",
-        "projectPath": "D:\\main\\ClassEasy\\src\\ClassEasy\\ClassEasy.csproj",
+        "projectPath": "d:\\main\\ClassEasy\\src\\ClassEasy\\ClassEasy.csproj",
         "packagesPath": "C:\\Users\\Windows_123_fish\\.nuget\\packages\\",
-        "outputPath": "D:\\main\\ClassEasy\\src\\ClassEasy\\obj\\",
+        "outputPath": "d:\\main\\ClassEasy\\src\\ClassEasy\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Windows_123_fish\\AppData\\Roaming\\NuGet\\NuGet.Config"

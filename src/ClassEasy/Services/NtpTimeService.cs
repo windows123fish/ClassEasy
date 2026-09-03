@@ -142,7 +142,7 @@ namespace ClassEasy.Services
         }
 
         // 把所有候选节点扁平化为一个列表，按域优先、IP 回退的顺序拼接，便于随机均匀抽样。
-        private static readonly IReadOnlyList<NtpEndpoint> Flattened = BuildFlatList();
+        private static IReadOnlyList<NtpEndpoint> Flattened = BuildFlatList();
 
         private static List<NtpEndpoint> BuildFlatList()
         {
@@ -173,6 +173,41 @@ namespace ClassEasy.Services
                 }
             }
             return list;
+        }
+
+        /// <summary>
+        /// 开发者模式专用：用用户自定义的服务器列表替换内置清单。
+        /// 传入 null/空字符串时回退到内置清单。
+        /// 格式支持逗号、换行或分号分隔；自动 trim；空项忽略；每项以"自定义"分类名归类。
+        /// </summary>
+        public static void OverrideServers(string customList)
+        {
+            if (string.IsNullOrWhiteSpace(customList))
+            {
+                Flattened = BuildFlatList();
+                return;
+            }
+
+            var separators = new[] { ',', '\n', '\r', ';', ' ', '\t' };
+            var hosts = customList.Split(separators, StringSplitOptions.RemoveEmptyEntries);
+            var list = new List<NtpEndpoint>();
+            foreach (var raw in hosts)
+            {
+                var host = raw.Trim();
+                if (string.IsNullOrEmpty(host)) continue;
+
+                // 简单判断：含 ":"（IPv6）或全数字点（IPv4）算 IP；否则算域名
+                bool isIp = host.Contains(":") ||
+                            (host.Count(c => c == '.') == 3 &&
+                             host.Split('.').All(p => byte.TryParse(p, out _)));
+                list.Add(new NtpEndpoint
+                {
+                    Category = "自定义",
+                    Host = host,
+                    IsIp = isIp
+                });
+            }
+            Flattened = list.Count > 0 ? list : BuildFlatList();
         }
 
         private static readonly object _syncRoot = new object();

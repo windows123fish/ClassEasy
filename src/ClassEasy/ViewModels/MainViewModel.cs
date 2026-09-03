@@ -45,6 +45,13 @@ namespace ClassEasy.ViewModels
             Refresh();
             WindowOpacity = _config.WindowOpacity;
             _isClickThrough = _config.ClickThroughMode;
+            _backdropOpacity = _config.BackdropOpacity;
+            // 开发者模式专属：应用自定义 NTP 列表与日志级别（重启后生效）
+            if (!string.IsNullOrEmpty(_config.CustomNtpServers))
+            {
+                NtpTimeService.OverrideServers(_config.CustomNtpServers);
+            }
+            LogService.MinLevel = string.IsNullOrEmpty(_config.LogLevel) ? "Info" : _config.LogLevel;
             ClockStatusText = NtpTimeService.ClockSourceText;
             // 启动时立即同步一次授时中心（异步、失败自动降级，不阻塞UI）
             SyncNtpAsync().FireAndForget();
@@ -153,6 +160,47 @@ namespace ClassEasy.ViewModels
             }
         }
 
+        private double _backdropOpacity;
+        /// <summary>磨砂背景的白底不透明度（0.2~1.0），越大越"实"，越小越"虚"。
+        /// Win11 上叠在系统 Acrylic 上；Win7-10 作为半透渐变。</summary>
+        public double BackdropOpacity
+        {
+            get => _backdropOpacity;
+            set
+            {
+                double clamped = Math.Max(0.2, Math.Min(1.0, value));
+                if (SetProperty(ref _backdropOpacity, clamped))
+                {
+                    // 刷子依赖此值，必须通知刷子重新计算。
+                    OnPropertyChanged(nameof(BackdropBrush));
+                }
+            }
+        }
+
+        /// <summary>磨砂背景的渐变刷子：透明度随 <see cref="BackdropOpacity"/> 变化。
+        /// 每次访问都 new 一个新刷子，便于 WPF 数据绑定感知变更并刷新 UI。</summary>
+        public System.Windows.Media.LinearGradientBrush BackdropBrush
+        {
+            get
+            {
+                // 顶亮底微暗，模拟"光从上方来的玻璃"。
+                byte topAlpha = (byte)(_backdropOpacity * 255);
+                byte bottomAlpha = (byte)(_backdropOpacity * 255 * 0.85);
+                return new System.Windows.Media.LinearGradientBrush
+                {
+                    StartPoint = new System.Windows.Point(0, 0),
+                    EndPoint = new System.Windows.Point(0, 1),
+                    GradientStops = new System.Windows.Media.GradientStopCollection
+                    {
+                        new System.Windows.Media.GradientStop(
+                            System.Windows.Media.Color.FromArgb(topAlpha, 255, 255, 255), 0),
+                        new System.Windows.Media.GradientStop(
+                            System.Windows.Media.Color.FromArgb(bottomAlpha, 238, 243, 247), 1)
+                    }
+                };
+            }
+        }
+
         private bool _isHovering;
         /// <summary>鼠标是否悬停在窗口上（由 MainWindow MouseEnter/Leave 维护）。</summary>
         public bool IsHovering
@@ -168,11 +216,9 @@ namespace ClassEasy.ViewModels
         }
 
         /// <summary>实际生效的窗口不透明度。
-        /// 优先级：
-        ///   1. 手动穿透（持久化 Ctrl+Alt+T）→ baseOpacity × 0.35（最淡，告知用户"这就是穿透态"）
-        ///   2. 悬停即穿透（120ms 去抖）→ baseOpacity × 0.22（非常淡，提示"正在穿透点后面"）
-        ///   3. 鼠标悬停在上面但没进入穿透 → 清晰（方便拖动/点内容）
-        ///   4. 普通态 → × 0.70
+        /// 用户设置的 WindowOpacity 作为基础值；
+        /// 只有处于"穿透模式"时才淡化（作为视觉提示："你现在点到的是后面的窗口"），
+        /// 非穿透态下不再自动乘淡化系数，保证课表内容清晰可读。
         /// </summary>
         public double EffectiveOpacity
         {
@@ -182,21 +228,20 @@ namespace ClassEasy.ViewModels
                 double target;
                 if (IsClickThrough)
                 {
-                    target = baseOpacity * 0.35;
+                    // 手动穿透（Ctrl+Alt+T / 托盘勾选）：轻度淡化
+                    target = baseOpacity * 0.75;
                 }
                 else if (HoverClickThrough)
                 {
-                    target = baseOpacity * 0.22;
-                }
-                else if (IsHovering)
-                {
-                    target = baseOpacity;
+                    // 悬停即穿透（鼠标停在顶栏 120ms 后）：中度淡化提示"正在点后面"
+                    target = baseOpacity * 0.55;
                 }
                 else
                 {
-                    target = baseOpacity * 0.70;
+                    // 正常显示（含悬停清晰态）：按用户配置值，不再乘淡化系数
+                    target = baseOpacity;
                 }
-                return Math.Max(0.08, Math.Min(1.0, target));
+                return Math.Max(0.20, Math.Min(1.0, target));
             }
         }
 
@@ -349,6 +394,47 @@ namespace ClassEasy.ViewModels
             }
         }
 
+        /// <summary>下一节课课程名（方形卡片单独显示用）。</summary>
+        public string NextLessonName
+        {
+            get
+            {
+                if (NextLesson == null)
+                    return "今日课程已结束";
+                return NextLesson.Name;
+            }
+        }
+
+        /// <summary>当前是否处于"无下一节课"状态（用于隐藏下一节整段）。</summary>
+        public bool IsNextLessonEmpty => NextLesson == null;
+
+        /// <summary>下一节括号里是否有"非空"细节（时间/教室）需要展示。</summary>
+        public bool HasNextLessonDetail => !string.IsNullOrWhiteSpace(NextLessonDetail);
+
+        /// <summary>当前日期对应的节日文本，空表示无节日。</summary>
+        public string HolidayText { get; private set; } = "";
+
+        /// <summary>当前是否处于"无正在上的课"状态（用于隐藏当前课整段）。</summary>
+        public bool IsCurrentLessonEmpty => CurrentLesson == null;
+
+        /// <summary>当前课括号里是否有"非空"细节（老师/教室/时间）需要展示。</summary>
+        public bool HasCurrentLessonDetail => !string.IsNullOrWhiteSpace(CurrentLessonDetail);
+
+        /// <summary>是否今日完全没课（当前+下一节都为空，用于彻底隐藏整组）。</summary>
+        public bool IsNoLessonsToday => CurrentLesson == null && NextLesson == null;
+
+        /// <summary>下一节课的上课时间/教室等细节（方形卡片单独显示用）。</summary>
+        public string NextLessonDetail
+        {
+            get
+            {
+                if (NextLesson == null)
+                    return "";
+                string classroom = string.IsNullOrWhiteSpace(NextLesson.Location) ? "" : (" · " + NextLesson.Location);
+                return NextLesson.StartTime + " – " + NextLesson.EndTime + classroom;
+            }
+        }
+
         /// <summary>每秒刷新当前时间，并重新判断当前/下一节课程。</summary>
         private void Refresh()
         {
@@ -357,6 +443,9 @@ namespace ClassEasy.ViewModels
             CurrentTime = now.ToString("HH:mm:ss");
             DateText = now.ToString("M月d日");
             CurrentWeekText = WeekDays[(int)now.DayOfWeek];
+
+            // 节假日显示
+            HolidayText = _config.ShowHoliday ? HolidayService.GetHolidayName(now.Date) : "";
 
             // 授时状态秒级同步（授时成功/失败切换时刷新胶囊颜色与文本）
             var cs = NtpTimeService.ClockSourceText;
@@ -399,6 +488,19 @@ namespace ClassEasy.ViewModels
             CurrentLesson = current;
             NextLesson = next;
             UpdateLessonProgress(current, timeOfDay);
+
+            // 当 CurrentLesson / NextLesson 变化时，派生的文本属性也要通知 UI 刷新
+            OnPropertyChanged(nameof(CurrentLessonText));
+            OnPropertyChanged(nameof(CurrentLessonDetail));
+            OnPropertyChanged(nameof(NextLessonText));
+            OnPropertyChanged(nameof(NextLessonName));
+            OnPropertyChanged(nameof(NextLessonDetail));
+            OnPropertyChanged(nameof(CountdownText));
+            OnPropertyChanged(nameof(IsCurrentLessonEmpty));
+            OnPropertyChanged(nameof(IsNextLessonEmpty));
+            OnPropertyChanged(nameof(IsNoLessonsToday));
+            OnPropertyChanged(nameof(HasCurrentLessonDetail));
+            OnPropertyChanged(nameof(HasNextLessonDetail));
 
             // 每 30 分钟（或用户自定义授时同步频率）刷新一次天气与授时中心（防止系统休眠/时钟跳跃）
             int ntpInterval = Math.Max(5, Math.Min(240, _config.NtpSyncIntervalMinutes));
@@ -457,7 +559,7 @@ namespace ClassEasy.ViewModels
             {
                 // 重新读取城市，确保设置修改后能立即生效。
                 var config = ConfigService.Load<AppConfig>(Paths.ConfigFile);
-                var weather = await WeatherService.GetWeatherAsync(config.City);
+                var weather = await WeatherService.GetWeatherAsync(config.City, config.WeatherSource);
                 WeatherText = string.Format("{0} {1}℃  {2}",
                     weather.Weather, weather.Temperature, weather.City);
             }
