@@ -7,7 +7,7 @@ namespace ClassEasy.ViewModels
     /// 顶栏"组件胶囊"基类。顶栏以组件化方式排列（时间 / 当前课 / 下一节 / 天气），
     /// 支持鼠标拖拽调整顺序，顺序持久化到配置。
     /// </summary>
-    public abstract class CapsuleViewModel : ViewModelBase
+    public abstract partial class CapsuleViewModel : ViewModelBase
     {
         /// <summary>组件标识（持久化用）：clock / current / next / weather。</summary>
         public abstract string Kind { get; }
@@ -33,9 +33,9 @@ namespace ClassEasy.ViewModels
         [ObservableProperty]
         private string _minuteText = "--";
 
-        /// <summary>时钟冒号是否显示（每秒闪烁，ClassIsland 风格）。</summary>
+        /// <summary>冒号是否处于闪烁淡出状态（设置开启闪烁时才可能为 true；淡出仅调透明度，占位不变不跳动）。</summary>
         [ObservableProperty]
-        private bool _timeColonVisible = true;
+        private bool _colonBlinking;
 
         [ObservableProperty]
         private string _dateText = "";

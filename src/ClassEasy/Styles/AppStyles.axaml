@@ -60,6 +60,18 @@
     </Setter>
   </Style>
 
+  <!-- 时钟冒号闪烁：仅调透明度（占位恒定不跳动）；未开启闪烁时无任何效果 -->
+  <Style Selector="TextBlock.colon">
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.25" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="TextBlock.colon.blink">
+    <Setter Property="Opacity" Value="0" />
+  </Style>
+
   <!-- 课程流：课间竖分隔线（ClassIsland LessonControlSeparator） -->
   <Style Selector="Rectangle.flowsep">
     <Setter Property="Width" Value="2" />

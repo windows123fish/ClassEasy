@@ -222,13 +222,24 @@ namespace ClassEasy.ViewModels
             _clock.TimeText = now.ToString("HH:mm:ss");
             _clock.HourText = now.ToString("HH");
             _clock.MinuteText = now.ToString("mm");
-            _clock.TimeColonVisible = now.Second % 2 == 0; // ClassIsland 式冒号闪烁
             _clock.DateText = now.ToString("M月d日");
             _clock.WeekText = "周" + "日一二三四五六"[(int)now.DayOfWeek];
 
             var holiday = _config.ShowHoliday ? HolidayService.GetHolidayName(now.Date) : "";
             _clock.HolidayText = string.IsNullOrEmpty(holiday) ? "" : "· " + holiday;
             _clock.NtpWarning = NtpTimeService.ClockWarningText;
+
+            // 冒号闪烁：默认关闭（常显）；开启后按配置间隔淡出/恢复（透明度过渡，占位不变）
+            if (_config.ClockColonBlink)
+            {
+                int interval = Math.Max(1, Math.Min(60, _config.ClockColonBlinkSeconds));
+                long secOfDay = (long)(now - now.Date).TotalSeconds;
+                _clock.ColonBlinking = secOfDay / interval % 2 == 1;
+            }
+            else
+            {
+                _clock.ColonBlinking = false;
+            }
 
             int dayKey = now.Year * 10000 + now.Month * 100 + now.Day;
             if (dayKey != _lastDayKey)

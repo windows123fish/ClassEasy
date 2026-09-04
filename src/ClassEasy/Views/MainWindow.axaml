@@ -32,18 +32,15 @@
               PointerReleased="Capsule_PointerReleased"
               PointerCaptureLost="Capsule_PointerCaptureLost">
         <StackPanel Orientation="Horizontal" Spacing="12">
-          <!-- 冒号闪烁：三层叠加，宽度恒定不跳动（ClassIsland 同款做法） -->
-          <Panel VerticalAlignment="Center" MinWidth="72">
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
             <TextBlock Text="{Binding HourText}" FontSize="25" FontWeight="SemiBold"
-                       Foreground="{DynamicResource PrimaryTextBrush}"
-                       HorizontalAlignment="Left" IsVisible="{Binding !TimeColonVisible}" />
+                       Foreground="{DynamicResource PrimaryTextBrush}" />
+            <TextBlock Text=":" FontSize="25" FontWeight="SemiBold" Margin="1,0"
+                       Classes.colon="True" Classes.blink="{Binding ColonBlinking}"
+                       Foreground="{DynamicResource PrimaryTextBrush}" />
             <TextBlock Text="{Binding MinuteText}" FontSize="25" FontWeight="SemiBold"
-                       Foreground="{DynamicResource PrimaryTextBrush}"
-                       HorizontalAlignment="Right" IsVisible="{Binding !TimeColonVisible}" />
-            <TextBlock Text="{Binding TimeText, StringFormat='{}{0:HH:mm}'}" FontSize="25" FontWeight="SemiBold"
-                       Foreground="{DynamicResource PrimaryTextBrush}"
-                       IsVisible="{Binding TimeColonVisible}" />
-          </Panel>
+                       Foreground="{DynamicResource PrimaryTextBrush}" />
+          </StackPanel>
           <StackPanel VerticalAlignment="Center">
             <StackPanel Orientation="Horizontal" Spacing="5">
               <TextBlock Text="{Binding DateText}" FontSize="12.5" FontWeight="Medium"
@@ -69,7 +66,13 @@
               PointerCaptureLost="Capsule_PointerCaptureLost">
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
           <ItemsControl ItemsSource="{Binding $parent[Window].((vm:MainViewModel)DataContext).TodayLessons}"
-                        ItemTemplate="{StaticResource FlowLessonTemplate}" />
+                        ItemTemplate="{StaticResource FlowLessonTemplate}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel Orientation="Horizontal" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+          </ItemsControl>
           <TextBlock Text="今天没有课程" FontSize="12" Classes="secondary" VerticalAlignment="Center"
                      IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).IsDayEmpty}" />
         </StackPanel>
@@ -119,7 +122,7 @@
   <Window.Resources>
     <!-- 顶栏课程流单项：已结束=首字淡化；进行中=科目名大字+倒计时圆条+底部进度条；未上=首字 -->
     <DataTemplate x:Key="FlowLessonTemplate" x:DataType="vm:LessonCardViewModel">
-      <StackPanel Orientation="Horizontal" Classes.flowitem Classes.past="{Binding IsPast}">
+      <StackPanel Orientation="Horizontal" Classes.flowitem="True" Classes.past="{Binding IsPast}">
         <Rectangle Classes="flowsep" IsVisible="{Binding !IsFirst}" Margin="0,0,14,0" />
         <Grid RowDefinitions="Auto,Auto" Margin="0,0,14,0" VerticalAlignment="Center">
           <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
