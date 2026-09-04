@@ -24,7 +24,7 @@
   </Window.Transitions>
 
   <Window.DataTemplates>
-    <!-- ============ 时间组件：ClassIsland 大字时钟（冒号闪烁） + 日期小字 ============ -->
+    <!-- ============ 时间组件：ClassIsland 大字时钟（冒号常显）+ 日期小字 ============ -->
     <DataTemplate DataType="{x:Type vm:ClockCapsuleViewModel}" x:DataType="vm:ClockCapsuleViewModel">
       <Border Classes="capsule" ToolTip.Tip="拖拽可调整组件顺序"
               PointerPressed="Capsule_PointerPressed"
@@ -36,7 +36,7 @@
             <TextBlock Text="{Binding HourText}" FontSize="25" FontWeight="SemiBold"
                        Foreground="{DynamicResource PrimaryTextBrush}" />
             <TextBlock Text=":" FontSize="25" FontWeight="SemiBold" Margin="1,0"
-                       Classes.colon="True" Classes.blink="{Binding ColonBlinking}"
+                       Classes.colon="True"
                        Foreground="{DynamicResource PrimaryTextBrush}" />
             <TextBlock Text="{Binding MinuteText}" FontSize="25" FontWeight="SemiBold"
                        Foreground="{DynamicResource PrimaryTextBrush}" />

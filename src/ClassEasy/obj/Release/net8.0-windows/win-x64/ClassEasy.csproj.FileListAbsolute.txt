@@ -228,3 +228,6 @@ D:\main\ClassEasy\src\ClassEasy\obj\Release\net8.0-windows\win-x64\ClassEasy.dll
 D:\main\ClassEasy\src\ClassEasy\obj\Release\net8.0-windows\win-x64\refint\ClassEasy.dll
 D:\main\ClassEasy\src\ClassEasy\obj\Release\net8.0-windows\win-x64\ClassEasy.genruntimeconfig.cache
 D:\main\ClassEasy\src\ClassEasy\obj\Release\net8.0-windows\win-x64\ref\ClassEasy.dll
+D:\main\ClassEasy\src\ClassEasy\bin\Release\net8.0-windows\win-x64\ClassEasy.pdb
+D:\main\ClassEasy\src\ClassEasy\obj\Release\net8.0-windows\win-x64\ClassEasy.sourcelink.json
+D:\main\ClassEasy\src\ClassEasy\obj\Release\net8.0-windows\win-x64\ClassEasy.pdb

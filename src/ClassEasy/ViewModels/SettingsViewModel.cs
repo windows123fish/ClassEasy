@@ -37,14 +37,6 @@ namespace ClassEasy.ViewModels
         [ObservableProperty]
         private double _backdropStrength = 0.65;
 
-        /// <summary>时间冒号闪烁开关（默认关闭）。</summary>
-        [ObservableProperty]
-        private bool _clockColonBlink;
-
-        /// <summary>冒号闪烁切换间隔（秒）。</summary>
-        [ObservableProperty]
-        private string _clockColonBlinkSeconds = "1";
-
         public SettingsViewModel(MainViewModel? main)
         {
             _main = main;
@@ -55,8 +47,6 @@ namespace ClassEasy.ViewModels
             ThemeModeIndex = cfg.ThemeMode == "Light" ? 1 : cfg.ThemeMode == "Dark" ? 2 : 0;
             AutoStart = cfg.AutoStart;
             BackdropStrength = cfg.BackdropStrength;
-            ClockColonBlink = cfg.ClockColonBlink;
-            ClockColonBlinkSeconds = Math.Max(1, Math.Min(60, cfg.ClockColonBlinkSeconds)).ToString();
             SelectedAccent = AccentPresets.FirstOrDefault(p =>
                 string.Equals(p.Hex, cfg.AccentColor, StringComparison.OrdinalIgnoreCase)) ?? AccentPresets[0];
         }
@@ -72,11 +62,6 @@ namespace ClassEasy.ViewModels
             cfg.AccentColor = SelectedAccent?.Hex ?? cfg.AccentColor;
             cfg.AutoStart = AutoStart;
             cfg.BackdropStrength = BackdropStrength;
-            cfg.ClockColonBlink = ClockColonBlink;
-            cfg.ClockColonBlinkSeconds =
-                int.TryParse(ClockColonBlinkSeconds, out int blinkSec)
-                    ? Math.Max(1, Math.Min(60, blinkSec))
-                    : 1;
 
             // 主题即时生效
             ThemeService.Apply(cfg.AccentColor, cfg.ThemeMode);

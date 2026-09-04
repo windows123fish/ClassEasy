@@ -45,11 +45,5 @@ namespace ClassEasy.Models
 
         /// <summary>是否显示天气组件。</summary>
         public bool ShowWeather { get; set; } = true;
-
-        /// <summary>时间冒号闪烁开关（默认关闭 = 时间常显无任何闪烁）。</summary>
-        public bool ClockColonBlink { get; set; } = false;
-
-        /// <summary>冒号闪烁切换间隔（秒，1~60），仅在闪烁开启时生效。</summary>
-        public int ClockColonBlinkSeconds { get; set; } = 1;
     }
 }

@@ -17,7 +17,7 @@ namespace ClassEasy.ViewModels
         private bool _showSeparator;
     }
 
-    /// <summary>时间胶囊：ClassIsland 式大字时钟（冒号闪烁）+ 日期/星期小字。</summary>
+    /// <summary>时间胶囊：ClassIsland 式大字时钟（冒号常显）+ 日期/星期小字。</summary>
     public partial class ClockCapsuleViewModel : CapsuleViewModel
     {
         public override string Kind => "clock";
@@ -32,10 +32,6 @@ namespace ClassEasy.ViewModels
         /// <summary>分钟（大字）。</summary>
         [ObservableProperty]
         private string _minuteText = "--";
-
-        /// <summary>冒号是否处于闪烁淡出状态（设置开启闪烁时才可能为 true；淡出仅调透明度，占位不变不跳动）。</summary>
-        [ObservableProperty]
-        private bool _colonBlinking;
 
         [ObservableProperty]
         private string _dateText = "";

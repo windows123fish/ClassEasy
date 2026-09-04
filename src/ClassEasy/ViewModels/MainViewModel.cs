@@ -229,18 +229,7 @@ namespace ClassEasy.ViewModels
             _clock.HolidayText = string.IsNullOrEmpty(holiday) ? "" : "· " + holiday;
             _clock.NtpWarning = NtpTimeService.ClockWarningText;
 
-            // 冒号闪烁：默认关闭（常显）；开启后按配置间隔淡出/恢复（透明度过渡，占位不变）
-            if (_config.ClockColonBlink)
-            {
-                int interval = Math.Max(1, Math.Min(60, _config.ClockColonBlinkSeconds));
-                long secOfDay = (long)(now - now.Date).TotalSeconds;
-                _clock.ColonBlinking = secOfDay / interval % 2 == 1;
-            }
-            else
-            {
-                _clock.ColonBlinking = false;
-            }
-
+            // 冒号常显，无任何闪烁逻辑（用户要求彻底移除闪烁效果）。
             int dayKey = now.Year * 10000 + now.Month * 100 + now.Day;
             if (dayKey != _lastDayKey)
             {

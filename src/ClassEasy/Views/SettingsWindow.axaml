@@ -57,16 +57,6 @@
             <TextBlock Text="{Binding BackdropStrength, StringFormat={}{0:P0}}"
                        VerticalAlignment="Center" FontSize="11" Classes="secondary" />
           </StackPanel>
-
-          <StackPanel Orientation="Horizontal" Spacing="10">
-            <TextBlock Text="冒号闪烁" VerticalAlignment="Center" Width="76" FontSize="12.5"
-                       Foreground="{DynamicResource PrimaryTextBrush}" />
-            <CheckBox Content="启用时间冒号闪烁" IsChecked="{Binding ClockColonBlink}"
-                      VerticalAlignment="Center" FontSize="12.5" />
-            <TextBox Text="{Binding ClockColonBlinkSeconds}" Width="52" VerticalAlignment="Center" />
-            <TextBlock Text="秒/次" VerticalAlignment="Center" FontSize="11" Classes="secondary"
-                       ToolTip.Tip="闪烁切换间隔（1~60 秒），仅在启用后生效" />
-          </StackPanel>
         </StackPanel>
 
         <!-- 数据 -->
