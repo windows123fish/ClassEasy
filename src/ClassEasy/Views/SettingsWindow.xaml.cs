@@ -166,11 +166,18 @@ namespace ClassEasy.Views
             {
                 var theme = (ThemeDefinition)ThemeCombo.SelectedItem;
                 _config.City = string.IsNullOrWhiteSpace(CityBox.Text) ? "北京" : CityBox.Text.Trim();
+                _config.WeatherSource = (WeatherSourceCombo.SelectedItem as string) ?? "uapis";
                 _config.Theme = theme?.Name ?? "蓝色";
                 _config.FontFamily = FontCombo.SelectedItem?.ToString() ?? "Microsoft YaHei UI";
                 _config.TimeFontSize = FontSizeSlider.Value;
                 _config.BackdropOpacity = BackdropSlider.Value;
                 _config.NtpSyncIntervalMinutes = (int)Math.Round(NtpIntervalSlider.Value, 0);
+                _config.ShowHoliday = ShowHolidayCheck.IsChecked == true;
+                // 开机启动：配置项与注册表同步
+                bool autoStart = AutoStartCheck.IsChecked == true;
+                _config.AutoStart = autoStart;
+                AutoStartService.SetEnabled(autoStart);
+
                 // 高级设置（dev 模式专属），即使面板不可见也安全写入
                 _config.CustomNtpServers = CustomNtpBox?.Text ?? "";
                 _config.LogLevel = (LogLevelCombo?.SelectedItem as string) ?? "Info";
@@ -179,6 +186,7 @@ namespace ClassEasy.Views
                 ThemeService.Apply(_config);
 
                 Saved?.Invoke(this, EventArgs.Empty);
+                ShowToast("设置更改成功");
             }
             catch (Exception ex)
             {
@@ -190,6 +198,25 @@ namespace ClassEasy.Views
             {
                 // 设置窗口保持打开，方便用户继续调整；点击右上角 X 或「取消」再关闭。
             }
+        }
+
+        private System.Windows.Threading.DispatcherTimer _toastTimer;
+
+        /// <summary>在设置窗口顶部显示提示条，2 秒后自动隐藏。</summary>
+        private void ShowToast(string message)
+        {
+            ToastBar.Visibility = Visibility.Visible;
+            _toastTimer?.Stop();
+            _toastTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(2)
+            };
+            _toastTimer.Tick += (s, args) =>
+            {
+                _toastTimer.Stop();
+                ToastBar.Visibility = Visibility.Collapsed;
+            };
+            _toastTimer.Start();
         }
 
         private void Cancel_Click(object sender, RoutedEventArgs e)

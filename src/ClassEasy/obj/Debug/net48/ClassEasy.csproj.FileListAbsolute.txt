@@ -21,3 +21,5 @@ D:\main\ClassEasy\src\ClassEasy\obj\Debug\net48\ClassEasy.sourcelink.json
 D:\main\ClassEasy\src\ClassEasy\obj\Debug\net48\ClassEasy.exe
 D:\main\ClassEasy\src\ClassEasy\obj\Debug\net48\ClassEasy.pdb
 D:\main\ClassEasy\src\ClassEasy\obj\Debug\net48\GeneratedInternalTypeHelper.g.cs
+d:\main\ClassEasy\src\ClassEasy\obj\Debug\net48\Views\ToastWindow.baml
+d:\main\ClassEasy\src\ClassEasy\obj\Debug\net48\Views\ToastWindow.g.cs

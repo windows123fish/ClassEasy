@@ -8,6 +8,13 @@
         Background="#F7FAFC"
         FontFamily="{DynamicResource Font.AppFamily}">
     <StackPanel Margin="20">
+        <!-- 保存成功提示条 -->
+        <Border x:Name="ToastBar" Background="#48BB78" CornerRadius="4"
+                Padding="12,8" Margin="0,0,0,12" Visibility="Collapsed">
+            <TextBlock Text="设置更改成功" Foreground="White" FontWeight="Bold"
+                       HorizontalAlignment="Center" />
+        </Border>
+
         <TextBlock Text="天气城市" FontWeight="Bold" Foreground="#2D3748" />
         <TextBox x:Name="CityBox" Margin="0,6,0,0" Padding="4" />
 

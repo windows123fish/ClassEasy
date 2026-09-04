@@ -36,9 +36,10 @@ namespace ClassEasy
                 return;
             }
 
-            // 加载配置并应用主题/字体。
+            // 加载配置并应用主题/字体/开机启动。
             var config = ConfigService.Load<AppConfig>(Paths.ConfigFile);
             ThemeService.Apply(config);
+            AutoStartService.SetEnabled(config.AutoStart);
 
             base.OnStartup(e);
 

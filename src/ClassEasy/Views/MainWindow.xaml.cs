@@ -60,7 +60,7 @@ namespace ClassEasy.Views
                 Point pos = p.Value;
 
                 bool inRect = pos.X >= -1 && pos.X <= ActualWidth + 1
-                              && pos.Y >= -1 && pos.Y <= ActualHeight + 1;
+                            && pos.Y >= -1 && pos.Y <= ActualHeight + 1;
                 ViewModel.SetHoverDetected(inRect);
             };
             _hoverPollingTimer.Start();
