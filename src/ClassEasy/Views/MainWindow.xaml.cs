@@ -65,6 +65,29 @@ namespace ClassEasy.Views
             };
             _hoverPollingTimer.Start();
 
+            // 窗口大小变化时自动重新居中（内容变化触发）
+            SizeChanged += Window_SizeChanged;
+
+            // ViewModel 属性变化时强制窗口重新测量大小（天气、授时状态等变化时自动扩宽）
+            ViewModel.PropertyChanged += (sender, args) =>
+            {
+                // 天气、授时状态、课程文本变化时重新测量
+                if (args.PropertyName == nameof(ViewModel.WeatherText)
+                    || args.PropertyName == nameof(ViewModel.ClockStatusText)
+                    || args.PropertyName == nameof(ViewModel.CurrentTime)
+                    || args.PropertyName == nameof(ViewModel.CurrentWeekText)
+                    || args.PropertyName == nameof(ViewModel.DateText)
+                    || args.PropertyName == nameof(ViewModel.HolidayText)
+                    || args.PropertyName == nameof(ViewModel.CurrentLessonText)
+                    || args.PropertyName == nameof(ViewModel.NextLessonName)
+                    || args.PropertyName == nameof(ViewModel.IsCurrentLessonEmpty)
+                    || args.PropertyName == nameof(ViewModel.IsNextLessonEmpty))
+                {
+                    Dispatcher.BeginInvoke(new Action(ForceResizeToContent),
+                        DispatcherPriority.Background);
+                }
+            };
+
             // 系统设置变化（分辨率、DPI缩放、任务栏位置）时重新计算窗口位置和大小。
             SystemEvents.DisplaySettingsChanged += (sender, args) => RepositionToTop();
         }
@@ -81,12 +104,14 @@ namespace ClassEasy.Views
             Win32WindowHelper.EnableAcrylicBackdrop(this);
         }
 
+        private bool _suppressSizeChanged; // 防止 SizeChanged 事件递归触发
+
         /// <summary>把窗口按内容自适应大小，水平居中显示在屏幕顶部。</summary>
         private void RepositionToTop()
         {
             var workArea = SystemParameters.WorkArea;
 
-            // 让窗口大小完全由内容决定（按 Auto）
+            // 保持 WidthAndHeight，让 WPF 在内容变化时自动调整窗口大小
             SizeToContent = SizeToContent.WidthAndHeight;
 
             // 等 WPF 测量完内容后取 ActualWidth/Height 居中
@@ -95,8 +120,36 @@ namespace ClassEasy.Views
                 double w = ActualWidth > 0 ? ActualWidth : 800;
                 Top = workArea.Top + 4;
                 Left = workArea.Left + (workArea.Width - w) * 0.5;
-                // 居中后取消 SizeToContent，防止屏幕变化时再触发
-                SizeToContent = SizeToContent.Manual;
+            }), DispatcherPriority.Loaded);
+        }
+
+        /// <summary>窗口大小变化时自动重新居中（内容变化触发）。</summary>
+        private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (_suppressSizeChanged) return;
+            _suppressSizeChanged = true;
+
+            var workArea = SystemParameters.WorkArea;
+            Top = workArea.Top + 4;
+            Left = workArea.Left + (workArea.Width - ActualWidth) * 0.5;
+
+            _suppressSizeChanged = false;
+        }
+
+        /// <summary>强制窗口重新测量内容并自动调整大小（内容变化时调用）。</summary>
+        public void ForceResizeToContent()
+        {
+            _suppressSizeChanged = true; // 防止 SizeChanged 用旧尺寸居中
+            Width = double.NaN;
+            Height = double.NaN;
+            SizeToContent = SizeToContent.WidthAndHeight;
+            // 等 WPF 测量完新尺寸后再居中
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                var workArea = SystemParameters.WorkArea;
+                Top = workArea.Top + 4;
+                Left = workArea.Left + (workArea.Width - ActualWidth) * 0.5;
+                _suppressSizeChanged = false;
             }), DispatcherPriority.Loaded);
         }
 

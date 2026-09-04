@@ -280,7 +280,7 @@ namespace ClassEasy.Services
                         {
                             _localClockOffset = offset;
                             IsSynchronized = true;
-                            ClockSourceText = $"[成功]已向 NTP 服务器 {ep.Host} 同步时间";
+                            ClockSourceText = "";
                             LastServer = ep.Host;
                             LastCategory = ep.Category;
                         }
