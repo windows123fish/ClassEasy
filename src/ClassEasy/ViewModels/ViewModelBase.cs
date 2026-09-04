@@ -1,30 +1,9 @@
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace ClassEasy.ViewModels
 {
-    /// <summary>
-    /// 视图模型基类：实现 INotifyPropertyChanged，供 XAML 绑定使用。
-    /// </summary>
-    public abstract class ViewModelBase : INotifyPropertyChanged
+    /// <summary>所有视图模型的基类。</summary>
+    public abstract class ViewModelBase : ObservableObject
     {
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-
-        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
-        {
-            if (Equals(field, value))
-            {
-                return false;
-            }
-
-            field = value;
-            OnPropertyChanged(propertyName);
-            return true;
-        }
     }
 }

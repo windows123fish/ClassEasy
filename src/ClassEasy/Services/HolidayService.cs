@@ -113,12 +113,12 @@ namespace ClassEasy.Services
         {
             // 优先精确日期（调休后的长假）
             string key = date.ToString("yyyy-MM-dd");
-            if (Holidays.TryGetValue(key, out string name))
+            if (Holidays.TryGetValue(key, out string? name))
             {
                 return name;
             }
 
-            //  fallback 固定公历节日
+            // fallback 固定公历节日
             string fixedKey = "fixed-" + date.ToString("MM-dd");
             if (Holidays.TryGetValue(fixedKey, out name))
             {

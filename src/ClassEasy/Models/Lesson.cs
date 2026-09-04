@@ -1,14 +1,21 @@
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace ClassEasy.Models
 {
     /// <summary>
     /// 单节课程（一节课）。实现 INotifyPropertyChanged，
-    /// 供课表编辑器的双向绑定使用。
+    /// 供课表编辑/绑定的双向数据流使用。
     /// </summary>
-    public class Lesson : INotifyPropertyChanged
+    public class Lesson : ObservableObject
     {
+        private int _dayIndex;
+        /// <summary>星期索引：0=周一 … 6=周日。</summary>
+        public int DayIndex
+        {
+            get => _dayIndex;
+            set => SetProperty(ref _dayIndex, value);
+        }
+
         private string _name = "";
         /// <summary>课程名称。</summary>
         public string Name
@@ -47,25 +54,6 @@ namespace ClassEasy.Models
         {
             get => _endTime;
             set => SetProperty(ref _endTime, value);
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        private void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-
-        private bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
-        {
-            if (Equals(field, value))
-            {
-                return false;
-            }
-
-            field = value;
-            OnPropertyChanged(propertyName);
-            return true;
         }
 
         /// <summary>返回课程的显示摘要（便于调试和日志）。</summary>

@@ -68,7 +68,7 @@ namespace ClassEasy.Views {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/ClassEasy;component/views/toastwindow.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/ClassEasy;V1.0.0.0;component/views/toastwindow.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\Views\ToastWindow.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);

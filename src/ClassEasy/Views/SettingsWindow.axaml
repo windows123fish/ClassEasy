@@ -1,0 +1,95 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ClassEasy.ViewModels"
+        x:Class="ClassEasy.Views.SettingsWindow"
+        x:DataType="vm:SettingsViewModel"
+        Title="ClassEasy 设置"
+        Width="440" Height="540"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        FontFamily="Segoe UI Variable Display, Segoe UI, Microsoft YaHei UI">
+
+  <Border CornerRadius="8" Background="{DynamicResource IslandBgBrush}"
+          BorderBrush="{DynamicResource IslandBorderBrush}" BorderThickness="1">
+    <ScrollViewer>
+      <StackPanel Margin="24,20" Spacing="16">
+
+        <TextBlock Text="设置" FontSize="18" FontWeight="SemiBold"
+                   Foreground="{DynamicResource PrimaryTextBrush}" />
+
+        <!-- 外观 -->
+        <StackPanel Spacing="10">
+          <TextBlock Text="外观" Classes="section" />
+
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock Text="主题模式" VerticalAlignment="Center" Width="76" FontSize="12.5"
+                       Foreground="{DynamicResource PrimaryTextBrush}" />
+            <ComboBox SelectedIndex="{Binding ThemeModeIndex}" Width="150">
+              <ComboBoxItem Content="跟随系统" />
+              <ComboBoxItem Content="浅色" />
+              <ComboBoxItem Content="深色" />
+            </ComboBox>
+          </StackPanel>
+
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock Text="主题色" VerticalAlignment="Center" Width="76" FontSize="12.5"
+                       Foreground="{DynamicResource PrimaryTextBrush}" />
+            <ListBox ItemsSource="{Binding AccentPresets}" SelectedItem="{Binding SelectedAccent}"
+                     Height="38" Padding="4">
+              <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" Spacing="6" />
+                </ItemsPanelTemplate>
+              </ListBox.ItemsPanel>
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:AccentPreset">
+                  <Ellipse Width="20" Height="20" Fill="{Binding Brush}" />
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </StackPanel>
+
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock Text="亚克力强度" VerticalAlignment="Center" Width="76" FontSize="12.5"
+                       Foreground="{DynamicResource PrimaryTextBrush}" />
+            <Slider Minimum="0.2" Maximum="1" Value="{Binding BackdropStrength}"
+                    Width="180" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding BackdropStrength, StringFormat={}{0:P0}}"
+                       VerticalAlignment="Center" FontSize="11" Classes="secondary" />
+          </StackPanel>
+        </StackPanel>
+
+        <!-- 数据 -->
+        <StackPanel Spacing="10">
+          <TextBlock Text="数据" Classes="section" />
+
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock Text="天气城市" VerticalAlignment="Center" Width="76" FontSize="12.5"
+                       Foreground="{DynamicResource PrimaryTextBrush}" />
+            <TextBox Text="{Binding City}" Width="150" Watermark="如：上海" />
+          </StackPanel>
+
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock Text="天气数据源" VerticalAlignment="Center" Width="76" FontSize="12.5"
+                       Foreground="{DynamicResource PrimaryTextBrush}" />
+            <ComboBox SelectedIndex="{Binding WeatherSourceIndex}" Width="150">
+              <ComboBoxItem Content="uapis.cn（国内）" />
+              <ComboBoxItem Content="open-meteo（全球）" />
+            </ComboBox>
+          </StackPanel>
+        </StackPanel>
+
+        <!-- 其他 -->
+        <StackPanel Spacing="10">
+          <TextBlock Text="其他" Classes="section" />
+          <CheckBox Content="开机自动启动" IsChecked="{Binding AutoStart}" />
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
+          <Button Content="取消" Command="{Binding CancelCommand}" Width="88" />
+          <Button Content="保存" Command="{Binding SaveCommand}" Width="88" Classes="accent" />
+        </StackPanel>
+      </StackPanel>
+    </ScrollViewer>
+  </Border>
+</Window>

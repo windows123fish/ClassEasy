@@ -8,10 +8,10 @@ namespace ClassEasy.Services
     /// </summary>
     public static class Paths
     {
-        private static string _dataDir;
+        private static string? _dataDir;
 
         /// <summary>
-        /// 数据根目录。通过“实际尝试创建目录”来探测第一个可写的位置，
+        /// 数据根目录。通过"实际尝试创建目录"来探测第一个可写的位置，
         /// 依次尝试 ApplicationData、LocalApplicationData、Temp、程序目录，
         /// 避免在只读/被保护目录下创建文件导致 UnauthorizedAccessException。
         /// </summary>
@@ -72,9 +72,9 @@ namespace ClassEasy.Services
         }
 
         /// <summary>课表数据文件路径。</summary>
-        public static string ScheduleFile => Path.Combine(DataDir, "schedule.xml");
+        public static string ScheduleFile => Path.Combine(DataDir, "schedule.json");
 
         /// <summary>应用配置文件路径。</summary>
-        public static string ConfigFile => Path.Combine(DataDir, "config.xml");
+        public static string ConfigFile => Path.Combine(DataDir, "config.json");
     }
 }

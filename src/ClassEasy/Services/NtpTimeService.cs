@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 
@@ -16,15 +15,11 @@ namespace ClassEasy.Services
     /// </summary>
     public static class NtpTimeService
     {
-        // ----------------------------------------------------------------------------
-        // 1. NTP 服务器清单（10 大类，严格按用户提供的内容组织）
-        // ----------------------------------------------------------------------------
-        // 每一个「组」有：Category 分类名；Primary 优先（域名）；Fallback IPs 域名失败时依次尝试
         private class NtpGroup
         {
-            public string Category { get; set; }
-            public string[] Domains { get; set; }
-            public string[] FallbackIps { get; set; }
+            public string Category { get; set; } = "";
+            public string[] Domains { get; set; } = Array.Empty<string>();
+            public string[] FallbackIps { get; set; } = Array.Empty<string>();
         }
 
         private static readonly List<NtpGroup> ServerGroups = new List<NtpGroup>
@@ -131,14 +126,11 @@ namespace ClassEasy.Services
             },
         };
 
-        // ----------------------------------------------------------------------------
-        // 2. 节点扁平化 + 随机均匀抽样
-        // ----------------------------------------------------------------------------
         private class NtpEndpoint
         {
-            public string Category { get; set; }     // 服务器所属分类
-            public string Host { get; set; }         // 实际尝试的主机：域名或 IP
-            public bool IsIp { get; set; }           // 是否为 IP （Fallback）
+            public string Category { get; set; } = "";
+            public string Host { get; set; } = "";
+            public bool IsIp { get; set; }
         }
 
         // 把所有候选节点扁平化为一个列表，按域优先、IP 回退的顺序拼接，便于随机均匀抽样。
@@ -149,7 +141,6 @@ namespace ClassEasy.Services
             var list = new List<NtpEndpoint>();
             foreach (var g in ServerGroups)
             {
-                // 域名优先
                 if (g.Domains != null)
                 {
                     foreach (var d in g.Domains)
@@ -160,7 +151,6 @@ namespace ClassEasy.Services
                         }
                     }
                 }
-                // IP 回退
                 if (g.FallbackIps != null)
                 {
                     foreach (var ip in g.FallbackIps)
@@ -176,11 +166,11 @@ namespace ClassEasy.Services
         }
 
         /// <summary>
-        /// 开发者模式专用：用用户自定义的服务器列表替换内置清单。
+        /// 用用户自定义的服务器列表替换内置清单。
         /// 传入 null/空字符串时回退到内置清单。
-        /// 格式支持逗号、换行或分号分隔；自动 trim；空项忽略；每项以"自定义"分类名归类。
+        /// 格式支持逗号、换行或分号分隔；自动 trim；空项忽略。
         /// </summary>
-        public static void OverrideServers(string customList)
+        public static void OverrideServers(string? customList)
         {
             if (string.IsNullOrWhiteSpace(customList))
             {
@@ -196,7 +186,6 @@ namespace ClassEasy.Services
                 var host = raw.Trim();
                 if (string.IsNullOrEmpty(host)) continue;
 
-                // 简单判断：含 ":"（IPv6）或全数字点（IPv4）算 IP；否则算域名
                 bool isIp = host.Contains(":") ||
                             (host.Count(c => c == '.') == 3 &&
                              host.Split('.').All(p => byte.TryParse(p, out _)));
@@ -221,13 +210,13 @@ namespace ClassEasy.Services
 
         public static bool IsSynchronized { get; private set; }
 
-        /// <summary>「✓ 国家授时」或「⚠ 本地时间」——失败后立即切换回警告。</summary>
-        public static string ClockSourceText { get; private set; } = "⚠ 本地时间";
+        /// <summary>同步失败时的警告文本；成功时为空。</summary>
+        public static string ClockWarningText { get; private set; } = "[警告] 当前为本地时间，时间可能不准确！";
 
-        /// <summary>最近一次成功所用的服务器（主机名/IP）。默认空字符串。</summary>
+        /// <summary>最近一次成功所用的服务器（主机名/IP）。</summary>
         public static string LastServer { get; private set; } = "";
 
-        /// <summary>最近一次成功所用的分类名称（例如「云厂商（阿里云 / 腾讯云）」）。</summary>
+        /// <summary>最近一次成功所用的分类名称。</summary>
         public static string LastCategory { get; private set; } = "";
 
         public static DateTime GetNow()
@@ -258,7 +247,7 @@ namespace ClassEasy.Services
 
             string lastServerTried = "";
             string lastCategoryTried = "";
-            Exception lastError = null;
+            Exception? lastError = null;
 
             foreach (int idx in order)
             {
@@ -280,7 +269,7 @@ namespace ClassEasy.Services
                         {
                             _localClockOffset = offset;
                             IsSynchronized = true;
-                            ClockSourceText = "";
+                            ClockWarningText = "";
                             LastServer = ep.Host;
                             LastCategory = ep.Category;
                         }
@@ -304,7 +293,7 @@ namespace ClassEasy.Services
             {
                 _localClockOffset = TimeSpan.Zero;
                 IsSynchronized = false;
-                ClockSourceText = "[警告] 当前为本地时间，时间可能不准确！";
+                ClockWarningText = "[警告] 当前为本地时间，时间可能不准确！";
             }
             LogService.Warn("全部 NTP 服务器同步失败，使用本地系统时间。最后尝试：" +
                             $"{lastCategoryTried}/{lastServerTried} — {(lastError?.Message ?? "(无)")}");
@@ -313,8 +302,6 @@ namespace ClassEasy.Services
         /// <summary>
         /// 向单个主机（可以是域名或 IPv4/IPv6；IPv6 传入时已加方括号）发起一次 NTP 请求。
         /// </summary>
-        /// <param name="hostForSocket">传进 UdpClient 的主机（IPv6 已加 []）。</param>
-        /// <param name="displayHost">日志显示用的主机名（不做修改）。</param>
         private static async Task<TimeSpan> QueryNtpOffsetAsync(string hostForSocket, string displayHost)
         {
             // NTP 报文：首字节 LI=0 VN=4 Mode=3(client) → 0x23。

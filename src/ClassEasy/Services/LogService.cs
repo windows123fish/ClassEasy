@@ -14,8 +14,7 @@ namespace ClassEasy.Services
         public static string LogFile => Path.Combine(
             Paths.DataDir, "logs", DateTime.Now.ToString("yyyyMMdd") + ".log");
 
-        /// <summary>当前最低输出级别：Info（全部） / Warning（警告+错误） / Error（仅错误）。
-        /// 默认 Info；开发者可在配置里调高减少噪音。</summary>
+        /// <summary>当前最低输出级别：Info（全部） / Warning（警告+错误） / Error（仅错误）。</summary>
         public static string MinLevel { get; set; } = "Info";
 
         /// <summary>把字符串级别映射为数值（数字越大越严格）。</summary>
@@ -40,7 +39,7 @@ namespace ClassEasy.Services
             if (ShouldWrite("Info")) Write("INFO", message, null);
         }
 
-        public static void Error(string message, Exception ex = null)
+        public static void Error(string message, Exception? ex = null)
         {
             if (ShouldWrite("Error")) Write("ERROR", message, ex);
         }
@@ -51,7 +50,7 @@ namespace ClassEasy.Services
             if (ShouldWrite("Warning")) Write("WARN", message, null);
         }
 
-        private static void Write(string level, string message, Exception ex)
+        private static void Write(string level, string message, Exception? ex)
         {
             try
             {

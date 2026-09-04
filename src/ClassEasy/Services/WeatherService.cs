@@ -1,5 +1,4 @@
 using System;
-using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -14,18 +13,10 @@ namespace ClassEasy.Services
     /// </summary>
     public static class WeatherService
     {
-        private static readonly HttpClient Client = CreateClient();
-
-        private static HttpClient CreateClient()
+        private static readonly HttpClient Client = new HttpClient
         {
-            // 兼容 Win7：显式启用 TLS 1.2，否则 HTTPS 请求可能失败。
-            ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
-
-            return new HttpClient
-            {
-                Timeout = TimeSpan.FromSeconds(10)
-            };
-        }
+            Timeout = TimeSpan.FromSeconds(10)
+        };
 
         /// <summary>
         /// 按指定数据源获取指定城市的实时天气。
@@ -142,7 +133,7 @@ namespace ClassEasy.Services
 
         private static double ExtractDouble(string json, string key)
         {
-            var match = Regex.Match(json, "\"" + key + "\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)");
+            var match = Regex.Match(json, "\""+key+"\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)");
             return match.Success && double.TryParse(match.Groups[1].Value, out double v) ? v : 0;
         }
     }

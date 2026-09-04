@@ -1,508 +1,245 @@
 using System;
-using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Threading;
+using Avalonia.Threading;
 using ClassEasy.Models;
 using ClassEasy.Services;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace ClassEasy.ViewModels
 {
     /// <summary>
-    /// 主窗口视图模型：维护当前时间、当前课程与下一节课程。
+    /// 主窗口视图模型：
+    ///   - 顶栏组件化胶囊（时间 / 当前课 / 下一节 / 天气），支持拖拽排序
+    ///   - 日/周课表视图切换，当前课高亮、已过课淡化
+    ///   - 下课/上课倒计时与提醒 Toast
+    ///   - NTP 授时 + 定时天气刷新
     /// </summary>
-    public class MainViewModel : ViewModelBase
+    public partial class MainViewModel : ViewModelBase
     {
-        private static readonly string[] WeekDays =
-            { "周日", "周一", "周二", "周三", "周四", "周五", "周六" };
+        private static readonly string[] WeekDayNames =
+            { "周一", "周二", "周三", "周四", "周五", "周六", "周日" };
 
-        private readonly DispatcherTimer _timer;
-        private readonly AppConfig _config;
+        private AppConfig _config;
         private readonly Schedule _schedule;
+        private DispatcherTimer? _timer;
         private DateTime _lastWeatherUpdate = DateTime.MinValue;
         private DateTime _lastNtpSync = DateTime.MinValue;
+        private int _lastDayKey = -1;
+        private string? _lastStartToastKey;
+        private string? _lastEndToastKey;
+        private CancellationTokenSource? _toastCts;
 
-        // 悬停去抖：悬停穿透延迟启用的取消令牌与最后状态
-        private CancellationTokenSource _hoverDebounceCts;
-        private bool _lastHoverDetected;
+        // 胶囊实例（BuildCapsules 时按配置顺序放入 Capsules）
+        private readonly ClockCapsuleViewModel _clock = new();
+        private readonly CurrentClassCapsuleViewModel _current = new();
+        private readonly NextClassCapsuleViewModel _next = new();
+        private readonly WeatherCapsuleViewModel _weather = new();
+
+        /// <summary>配置被外部（设置窗口）修改后触发；View 据此刷新亚克力/置顶等。</summary>
+        public event EventHandler? ConfigChanged;
+
+        /// <summary>鼠标穿透状态变更时触发：MainWindow 调用 Win32 切换窗口样式。</summary>
+        public event EventHandler<bool>? ClickThroughChanged;
 
         public MainViewModel()
         {
             _config = ConfigService.Load<AppConfig>(Paths.ConfigFile);
             _schedule = ConfigService.Load<Schedule>(Paths.ScheduleFile);
 
-            // 首次运行没有数据时，填充示例课表便于预览与开发调试。
+            // 首次运行没有数据时，填充示例周课表便于预览。
             if (_schedule.Lessons.Count == 0)
             {
                 LoadSampleLessons();
+                ConfigService.Save(Paths.ScheduleFile, _schedule);
             }
 
+            IsClickThrough = _config.ClickThroughMode;
+
+            BuildCapsules();
+
+            Tick();
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-            _timer.Tick += (sender, args) => Refresh();
+            _timer.Tick += (s, e) => Tick();
             _timer.Start();
 
-            Refresh();
-            WindowOpacity = _config.WindowOpacity;
-            _isClickThrough = _config.ClickThroughMode;
-            _backdropOpacity = _config.BackdropOpacity;
-            // 开发者模式专属：应用自定义 NTP 列表与日志级别（重启后生效）
-            if (!string.IsNullOrEmpty(_config.CustomNtpServers))
-            {
-                NtpTimeService.OverrideServers(_config.CustomNtpServers);
-            }
-            LogService.MinLevel = string.IsNullOrEmpty(_config.LogLevel) ? "Info" : _config.LogLevel;
-            ClockStatusText = NtpTimeService.ClockSourceText;
-            // 启动时立即同步一次授时中心（异步、失败自动降级，不阻塞UI）
+            // 启动即同步授时与天气（异步、失败自动降级，不阻塞 UI）
+            _lastNtpSync = DateTime.Now;
             SyncNtpAsync().FireAndForget();
             RefreshWeatherAsync().FireAndForget();
         }
 
-        private async Task SyncNtpAsync()
-        {
-            await NtpTimeService.SyncOnceAsync().ConfigureAwait(true);
-            // 回到 UI 线程刷新显示
-            ClockStatusText = NtpTimeService.ClockSourceText;
-        }
+        // ------------------------------------------------------------------
+        // 顶栏胶囊
+        // ------------------------------------------------------------------
 
-        /// <summary>外部修改课表后调用：重新从磁盘加载并立即刷新。</summary>
-        public void ReloadSchedule()
-        {
-            var fresh = ConfigService.Load<Schedule>(Paths.ScheduleFile);
-            _schedule.Lessons = fresh.Lessons ?? new System.Collections.Generic.List<Lesson>();
-            Refresh();
-        }
+        /// <summary>顶栏组件集合（顺序 = 显示顺序，可拖拽调整）。</summary>
+        public ObservableCollection<CapsuleViewModel> Capsules { get; } = new();
 
-        /// <summary>窗口关闭时释放定时器，避免 GC 延迟造成的后台刷新。</summary>
-        public void DisposeTimer()
-        {
-            _timer?.Stop();
-        }
+        /// <summary>当前是否处于"鼠标穿透"模式。</summary>
+        public bool IsClickThrough { get; private set; }
 
-        public string SchoolName => _config.SchoolName;
+        /// <summary>当前生效配置（设置窗口读写）。</summary>
+        public AppConfig Config => _config;
 
-        private string _clockStatusText = "[警告] 当前为本地时间，时间可能不准确！";
-        /// <summary>授时状态显示：✓ 国家授时  或  [警告] 当前为本地时间，时间可能不准确！。</summary>
-        public string ClockStatusText
+        private void BuildCapsules()
         {
-            get => _clockStatusText;
-            set => SetProperty(ref _clockStatusText, value);
-        }
-
-        private bool _hoverClickThrough;
-        /// <summary>悬停去抖后最终生效的"瞬时穿透"标志。为 true 时顶栏会穿透点击（不持久化）。</summary>
-        public bool HoverClickThrough
-        {
-            get => _hoverClickThrough;
-            private set
+            Capsules.Clear();
+            foreach (var kind in _config.CapsuleOrder)
             {
-                if (SetProperty(ref _hoverClickThrough, value))
+                switch (kind)
                 {
-                    // 悬停穿透也会改变窗口样式，通知 View 层去调用 Win32。
-                    ClickThroughChanged?.Invoke(this, EventArgs.Empty);
-                    OnPropertyChanged(nameof(EffectiveOpacity));
+                    case "clock": if (!Capsules.Contains(_clock)) Capsules.Add(_clock); break;
+                    case "current": if (!Capsules.Contains(_current)) Capsules.Add(_current); break;
+                    case "next": if (!Capsules.Contains(_next)) Capsules.Add(_next); break;
+                    case "weather": if (_config.ShowWeather && !Capsules.Contains(_weather)) Capsules.Add(_weather); break;
                 }
+            }
+
+            // 兜底：确保核心胶囊都在
+            if (!Capsules.Contains(_clock)) Capsules.Add(_clock);
+            if (!Capsules.Contains(_current)) Capsules.Add(_current);
+            if (!Capsules.Contains(_next)) Capsules.Add(_next);
+            if (_config.ShowWeather && !Capsules.Contains(_weather)) Capsules.Add(_weather);
+
+            UpdateSeparators();
+        }
+
+        /// <summary>第一个组件不显示左侧竖分隔线，其余显示（ClassIsland 组件分隔样式）。</summary>
+        private void UpdateSeparators()
+        {
+            for (int i = 0; i < Capsules.Count; i++)
+            {
+                Capsules[i].ShowSeparator = i > 0;
             }
         }
 
-        /// <summary>
-        /// 由 MainWindow 的鼠标位置轮询循环每 ~100ms 调用一次，报告"鼠标当前是否压在顶栏窗口矩形内"。
-        /// 内部做 120ms debounce：
-        ///   - hoverDetected=true：延迟 120ms 后仍保持→ 进入 HoverClickThrough 穿透态
-        ///   - hoverDetected=false：立即取消穿透（用户鼠标移走时应该立刻不穿透，能点回顶栏自身内容）
-        /// </summary>
-        public void SetHoverDetected(bool hoverDetected)
+        /// <summary>拖拽排序：把 drag 组件移动到 target 组件之前/之后，并持久化。</summary>
+        public void MoveCapsuleRelative(string dragKind, string targetKind, bool before)
         {
-            if (_lastHoverDetected == hoverDetected && hoverDetected) return;
-            _lastHoverDetected = hoverDetected;
-
-            // 先取消之前的去抖令牌
-            _hoverDebounceCts?.Cancel();
-            _hoverDebounceCts?.Dispose();
-            _hoverDebounceCts = null;
-
-            if (!hoverDetected)
+            var drag = Capsules.FirstOrDefault(c => c.Kind == dragKind);
+            var target = Capsules.FirstOrDefault(c => c.Kind == targetKind);
+            if (drag == null || target == null || ReferenceEquals(drag, target))
             {
-                // 鼠标离开 → 立即关穿透（不用延迟，保证用户能立刻点回顶栏内容）
-                HoverClickThrough = false;
                 return;
             }
 
-            // 鼠标进入 → 延迟 120ms；期间若又 SetHoverDetected(false)，令牌取消跳过穿透
+            int removeIndex = Capsules.IndexOf(drag);
+            int targetIndex = Capsules.IndexOf(target);
+            if (removeIndex < targetIndex)
+            {
+                targetIndex--;
+            }
+            if (!before)
+            {
+                targetIndex++;
+            }
+
+            targetIndex = Math.Max(0, Math.Min(Capsules.Count - 1, targetIndex));
+            Capsules.Move(removeIndex, targetIndex);
+            UpdateSeparators();
+
+            _config.CapsuleOrder = Capsules.Select(c => c.Kind).ToList();
+            ConfigService.Save(Paths.ConfigFile, _config);
+        }
+
+        // ------------------------------------------------------------------
+        // 展开面板：日/周视图
+        // ------------------------------------------------------------------
+
+        [ObservableProperty]
+        private bool _isExpanded;
+
+        [ObservableProperty]
+        private bool _isDayView = true;
+
+        [ObservableProperty]
+        private bool _isDayEmpty;
+
+        /// <summary>今天课程卡片（按开始时间排序）。</summary>
+        public ObservableCollection<LessonCardViewModel> TodayLessons { get; } = new();
+
+        /// <summary>本周 7 天的列。</summary>
+        public ObservableCollection<DayColumnViewModel> WeekDays { get; } = new();
+
+        [RelayCommand]
+        private void ToggleExpand() => IsExpanded = !IsExpanded;
+
+        [RelayCommand]
+        private void ShowDay() => IsDayView = true;
+
+        [RelayCommand]
+        private void ShowWeek() => IsDayView = false;
+
+        // ------------------------------------------------------------------
+        // 提醒 Toast
+        // ------------------------------------------------------------------
+
+        [ObservableProperty]
+        private string _toastText = "";
+
+        [ObservableProperty]
+        private bool _toastVisible;
+
+        private void ShowToast(string text)
+        {
+            ToastText = text;
+            ToastVisible = true;
+
+            _toastCts?.Cancel();
+            _toastCts?.Dispose();
             var cts = new CancellationTokenSource();
-            _hoverDebounceCts = cts;
-            Task.Delay(120, cts.Token).ContinueWith(t =>
+            _toastCts = cts;
+            var token = cts.Token;
+            Task.Delay(4000, token).ContinueWith(t =>
             {
-                if (t.IsCanceled) return;
-                // 再次确认：120ms 后鼠标仍然"压在顶栏上"才开穿透
-                if (_lastHoverDetected)
+                if (!t.IsCanceled)
                 {
-                    System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
-                    {
-                        HoverClickThrough = true;
-                    });
+                    Dispatcher.UIThread.Post(() => ToastVisible = false);
                 }
-            }, TaskContinuationOptions.ExecuteSynchronously);
+            });
         }
 
-        private double _windowOpacity;
-        /// <summary>主窗口透明度（0.3~1.0），供设置窗口实时预览绑定。</summary>
-        public double WindowOpacity
+        // ------------------------------------------------------------------
+        // 每秒刷新
+        // ------------------------------------------------------------------
+
+        /// <summary>窗口关闭时停止定时器。</summary>
+        public void Stop()
         {
-            get => _windowOpacity;
-            set
-            {
-                if (SetProperty(ref _windowOpacity, Math.Max(0.3, Math.Min(1.0, value))))
-                {
-                    // 配置值变化时，派生的 EffectiveOpacity 也要重算通知。
-                    OnPropertyChanged(nameof(EffectiveOpacity));
-                }
-            }
+            _timer?.Stop();
+            _timer = null;
         }
 
-        private double _backdropOpacity;
-        /// <summary>磨砂背景的白底不透明度（0.2~1.0），越大越"实"，越小越"虚"。
-        /// Win11 上叠在系统 Acrylic 上；Win7-10 作为半透渐变。</summary>
-        public double BackdropOpacity
+        /// <summary>每秒刷新时间/课程状态/倒计时，并按间隔刷新天气与授时。</summary>
+        public void Tick()
         {
-            get => _backdropOpacity;
-            set
-            {
-                double clamped = Math.Max(0.2, Math.Min(1.0, value));
-                if (SetProperty(ref _backdropOpacity, clamped))
-                {
-                    // 刷子依赖此值，必须通知刷子重新计算。
-                    OnPropertyChanged(nameof(BackdropBrush));
-                }
-            }
-        }
-
-        /// <summary>磨砂背景的渐变刷子：透明度随 <see cref="BackdropOpacity"/> 变化。
-        /// 每次访问都 new 一个新刷子，便于 WPF 数据绑定感知变更并刷新 UI。</summary>
-        public System.Windows.Media.LinearGradientBrush BackdropBrush
-        {
-            get
-            {
-                // 顶亮底微暗，模拟"光从上方来的玻璃"。
-                byte topAlpha = (byte)(_backdropOpacity * 255);
-                byte bottomAlpha = (byte)(_backdropOpacity * 255 * 0.85);
-                return new System.Windows.Media.LinearGradientBrush
-                {
-                    StartPoint = new System.Windows.Point(0, 0),
-                    EndPoint = new System.Windows.Point(0, 1),
-                    GradientStops = new System.Windows.Media.GradientStopCollection
-                    {
-                        new System.Windows.Media.GradientStop(
-                            System.Windows.Media.Color.FromArgb(topAlpha, 255, 255, 255), 0),
-                        new System.Windows.Media.GradientStop(
-                            System.Windows.Media.Color.FromArgb(bottomAlpha, 238, 243, 247), 1)
-                    }
-                };
-            }
-        }
-
-        private bool _isHovering;
-        /// <summary>鼠标是否悬停在窗口上（由 MainWindow MouseEnter/Leave 维护）。</summary>
-        public bool IsHovering
-        {
-            get => _isHovering;
-            set
-            {
-                if (SetProperty(ref _isHovering, value))
-                {
-                    OnPropertyChanged(nameof(EffectiveOpacity));
-                }
-            }
-        }
-
-        /// <summary>实际生效的窗口不透明度。
-        /// 用户设置的 WindowOpacity 作为基础值；
-        /// 只有处于"穿透模式"时才淡化（作为视觉提示："你现在点到的是后面的窗口"），
-        /// 非穿透态下不再自动乘淡化系数，保证课表内容清晰可读。
-        /// </summary>
-        public double EffectiveOpacity
-        {
-            get
-            {
-                double baseOpacity = WindowOpacity;
-                double target;
-                if (IsClickThrough)
-                {
-                    // 手动穿透（Ctrl+Alt+T / 托盘勾选）：轻度淡化
-                    target = baseOpacity * 0.75;
-                }
-                else if (HoverClickThrough)
-                {
-                    // 悬停即穿透（鼠标停在顶栏 120ms 后）：中度淡化提示"正在点后面"
-                    target = baseOpacity * 0.55;
-                }
-                else
-                {
-                    // 正常显示（含悬停清晰态）：按用户配置值，不再乘淡化系数
-                    target = baseOpacity;
-                }
-                return Math.Max(0.20, Math.Min(1.0, target));
-            }
-        }
-
-        private bool _isClickThrough;
-        /// <summary>当前是否处于"点击穿透"模式。
-        /// 修改此属性会写入持久化配置（下次启动沿用）。</summary>
-        public bool IsClickThrough
-        {
-            get => _isClickThrough;
-            set
-            {
-                if (SetProperty(ref _isClickThrough, value))
-                {
-                    _config.ClickThroughMode = value;
-                    // 穿透模式也会影响透明度显示，需要通知界面刷新
-                    OnPropertyChanged(nameof(EffectiveOpacity));
-                    ClickThroughChanged?.Invoke(this, EventArgs.Empty);
-                }
-            }
-        }
-
-        /// <summary>点击穿透状态变更时触发：MainWindow 调用 Win32 API 切换窗口样式。</summary>
-        public event EventHandler ClickThroughChanged;
-
-        /// <summary>预览透明度（不保存），设置窗口拖动滑块时调用。
-        /// 预览值若用户点「取消」则调用 <see cref="RestoreOpacityFromConfig"/> 回滚。</summary>
-        public void PreviewOpacity(double value)
-        {
-            WindowOpacity = value;
-        }
-
-        /// <summary>将透明度写回配置对象（在设置保存时调用）。</summary>
-        public void CommitOpacityToConfig()
-        {
-            _config.WindowOpacity = WindowOpacity;
-        }
-
-        /// <summary>取消预览，回到配置中保存的值。</summary>
-        public void RestoreOpacityFromConfig()
-        {
-            WindowOpacity = _config.WindowOpacity;
-        }
-
-        private string _dateText = "";
-        public string DateText
-        {
-            get => _dateText;
-            set => SetProperty(ref _dateText, value);
-        }
-
-        private string _currentWeekText = "";
-        public string CurrentWeekText
-        {
-            get => _currentWeekText;
-            set => SetProperty(ref _currentWeekText, value);
-        }
-
-        private double _lessonProgress;
-        public double LessonProgress
-        {
-            get => _lessonProgress;
-            set => SetProperty(ref _lessonProgress, value);
-        }
-
-        private string _countdownText = "";
-        public string CountdownText
-        {
-            get => _countdownText;
-            set => SetProperty(ref _countdownText, value);
-        }
-
-        private string _weatherText = "天气加载中…";
-        public string WeatherText
-        {
-            get => _weatherText;
-            set => SetProperty(ref _weatherText, value);
-        }
-
-        private string _currentTime;
-        public string CurrentTime
-        {
-            get => _currentTime;
-            set => SetProperty(ref _currentTime, value);
-        }
-
-        private Lesson _currentLesson;
-        public Lesson CurrentLesson
-        {
-            get => _currentLesson;
-            set
-            {
-                if (SetProperty(ref _currentLesson, value))
-                {
-                    OnPropertyChanged(nameof(CurrentLessonText));
-                    OnPropertyChanged(nameof(CurrentLessonDetail));
-                }
-            }
-        }
-
-        private Lesson _nextLesson;
-        public Lesson NextLesson
-        {
-            get => _nextLesson;
-            set
-            {
-                if (SetProperty(ref _nextLesson, value))
-                {
-                    OnPropertyChanged(nameof(NextLessonText));
-                }
-            }
-        }
-
-        // 以下为便于 XAML 直接绑定的只读显示属性，避免处理空值与拼接逻辑。
-
-        public string CurrentLessonText => CurrentLesson?.Name ?? "暂无课程";
-
-        public string CurrentLessonDetail
-        {
-            get
-            {
-                if (CurrentLesson == null)
-                {
-                    return "课间休息";
-                }
-
-                string detail = "";
-                if (!string.IsNullOrEmpty(CurrentLesson.Teacher))
-                {
-                    detail += CurrentLesson.Teacher + "  ";
-                }
-                if (!string.IsNullOrEmpty(CurrentLesson.Location))
-                {
-                    detail += CurrentLesson.Location + "  ";
-                }
-                detail += CurrentLesson.StartTime + "-" + CurrentLesson.EndTime;
-                return detail;
-            }
-        }
-
-        public string NextLessonText
-        {
-            get
-            {
-                if (NextLesson == null)
-                {
-                    return "今日课程已结束";
-                }
-
-                return "下一节：" + NextLesson.Name + "（" + NextLesson.StartTime + "）";
-            }
-        }
-
-        /// <summary>下一节课课程名（方形卡片单独显示用）。</summary>
-        public string NextLessonName
-        {
-            get
-            {
-                if (NextLesson == null)
-                    return "今日课程已结束";
-                return NextLesson.Name;
-            }
-        }
-
-        /// <summary>当前是否处于"无下一节课"状态（用于隐藏下一节整段）。</summary>
-        public bool IsNextLessonEmpty => NextLesson == null;
-
-        /// <summary>下一节括号里是否有"非空"细节（时间/教室）需要展示。</summary>
-        public bool HasNextLessonDetail => !string.IsNullOrWhiteSpace(NextLessonDetail);
-
-        /// <summary>当前日期对应的节日文本，空表示无节日。</summary>
-        public string HolidayText { get; private set; } = "";
-
-        /// <summary>当前是否处于"无正在上的课"状态（用于隐藏当前课整段）。</summary>
-        public bool IsCurrentLessonEmpty => CurrentLesson == null;
-
-        /// <summary>当前课括号里是否有"非空"细节（老师/教室/时间）需要展示。</summary>
-        public bool HasCurrentLessonDetail => !string.IsNullOrWhiteSpace(CurrentLessonDetail);
-
-        /// <summary>是否今日完全没课（当前+下一节都为空，用于彻底隐藏整组）。</summary>
-        public bool IsNoLessonsToday => CurrentLesson == null && NextLesson == null;
-
-        /// <summary>下一节课的上课时间/教室等细节（方形卡片单独显示用）。</summary>
-        public string NextLessonDetail
-        {
-            get
-            {
-                if (NextLesson == null)
-                    return "";
-                string classroom = string.IsNullOrWhiteSpace(NextLesson.Location) ? "" : (" · " + NextLesson.Location);
-                return NextLesson.StartTime + " – " + NextLesson.EndTime + classroom;
-            }
-        }
-
-        /// <summary>每秒刷新当前时间，并重新判断当前/下一节课程。</summary>
-        private void Refresh()
-        {
-            // 时间源：优先国家授时中心校准过的值（失败时 GetNow 退回本地时间）
             var now = NtpTimeService.GetNow();
-            CurrentTime = now.ToString("HH:mm:ss");
-            DateText = now.ToString("M月d日");
-            CurrentWeekText = WeekDays[(int)now.DayOfWeek];
 
-            // 节假日显示
-            HolidayText = _config.ShowHoliday ? HolidayService.GetHolidayName(now.Date) : "";
+            _clock.TimeText = now.ToString("HH:mm:ss");
+            _clock.HourText = now.ToString("HH");
+            _clock.MinuteText = now.ToString("mm");
+            _clock.TimeColonVisible = now.Second % 2 == 0; // ClassIsland 式冒号闪烁
+            _clock.DateText = now.ToString("M月d日");
+            _clock.WeekText = "周" + "日一二三四五六"[(int)now.DayOfWeek];
 
-            // 授时状态秒级同步（授时成功/失败切换时刷新胶囊颜色与文本）
-            var cs = NtpTimeService.ClockSourceText;
-            if (ClockStatusText != cs) ClockStatusText = cs;
+            var holiday = _config.ShowHoliday ? HolidayService.GetHolidayName(now.Date) : "";
+            _clock.HolidayText = string.IsNullOrEmpty(holiday) ? "" : "· " + holiday;
+            _clock.NtpWarning = NtpTimeService.ClockWarningText;
 
-            var timeOfDay = now.TimeOfDay;
-            var lessons = _schedule.Lessons
-                .OrderBy(l => ParseTime(l.StartTime))
-                .ToList();
-
-            Lesson current = null;
-            Lesson next = null;
-            bool currentFound = false;
-
-            foreach (var lesson in lessons)
+            int dayKey = now.Year * 10000 + now.Month * 100 + now.Day;
+            if (dayKey != _lastDayKey)
             {
-                var start = ParseTime(lesson.StartTime);
-                var end = ParseTime(lesson.EndTime);
-
-                if (timeOfDay >= start && timeOfDay < end)
-                {
-                    current = lesson;
-                    currentFound = true;
-                    continue;
-                }
-
-                if (currentFound)
-                {
-                    next = lesson;
-                    break;
-                }
+                _lastDayKey = dayKey;
+                RebuildDayCollections(now);
             }
 
-            // 还未开始第一节时，把第一节当作下一节。
-            if (current == null && next == null && lessons.Count > 0 && timeOfDay < ParseTime(lessons[0].StartTime))
-            {
-                next = lessons[0];
-            }
+            UpdateLessonStates(now);
 
-            CurrentLesson = current;
-            NextLesson = next;
-            UpdateLessonProgress(current, timeOfDay);
-
-            // 当 CurrentLesson / NextLesson 变化时，派生的文本属性也要通知 UI 刷新
-            OnPropertyChanged(nameof(CurrentLessonText));
-            OnPropertyChanged(nameof(CurrentLessonDetail));
-            OnPropertyChanged(nameof(NextLessonText));
-            OnPropertyChanged(nameof(NextLessonName));
-            OnPropertyChanged(nameof(NextLessonDetail));
-            OnPropertyChanged(nameof(CountdownText));
-            OnPropertyChanged(nameof(IsCurrentLessonEmpty));
-            OnPropertyChanged(nameof(IsNextLessonEmpty));
-            OnPropertyChanged(nameof(IsNoLessonsToday));
-            OnPropertyChanged(nameof(HasCurrentLessonDetail));
-            OnPropertyChanged(nameof(HasNextLessonDetail));
-
-            // 每 30 分钟（或用户自定义授时同步频率）刷新一次天气与授时中心（防止系统休眠/时钟跳跃）
+            // 定时刷新天气与授时（防休眠/时钟跳跃）
             int ntpInterval = Math.Max(5, Math.Min(240, _config.NtpSyncIntervalMinutes));
             if ((DateTime.Now - _lastWeatherUpdate).TotalMinutes >= 30)
             {
@@ -515,65 +252,189 @@ namespace ClassEasy.ViewModels
             }
         }
 
-        /// <summary>计算当前课程的进度（0~100）与下课倒计时。</summary>
-        private void UpdateLessonProgress(Lesson current, TimeSpan now)
+        private void RebuildDayCollections(DateTime now)
         {
-            if (current == null)
+            int todayIndex = ((int)now.DayOfWeek + 6) % 7; // 0=周一
+
+            TodayLessons.Clear();
+            foreach (var lesson in _schedule.Lessons
+                         .Where(l => l.DayIndex == todayIndex)
+                         .OrderBy(l => ParseTime(l.StartTime)))
             {
-                LessonProgress = 0;
-                CountdownText = "";
-                return;
+                TodayLessons.Add(new LessonCardViewModel(lesson));
             }
 
-            var start = ParseTime(current.StartTime);
-            var end = ParseTime(current.EndTime);
-            var total = (end - start).TotalMinutes;
-            var elapsed = (now - start).TotalMinutes;
-
-            LessonProgress = total > 0
-                ? Math.Max(0, Math.Min(100, elapsed / total * 100))
-                : 0;
-
-            var remaining = end - now;
-            if (remaining.TotalMinutes < 0)
+            WeekDays.Clear();
+            for (int i = 0; i < 7; i++)
             {
-                CountdownText = "已下课";
+                var date = now.Date.AddDays(i - todayIndex);
+                var col = new DayColumnViewModel(i, WeekDayNames[i], date, i == todayIndex);
+                foreach (var lesson in _schedule.Lessons
+                             .Where(l => l.DayIndex == i)
+                             .OrderBy(l => ParseTime(l.StartTime)))
+                {
+                    col.Lessons.Add(new LessonCardViewModel(lesson));
+                }
+                WeekDays.Add(col);
             }
-            else if (remaining.TotalMinutes < 1)
+        }
+
+        private void UpdateLessonStates(DateTime now)
+        {
+            var t = now.TimeOfDay;
+            LessonCardViewModel? currentCard = null;
+
+            for (int i = 0; i < TodayLessons.Count; i++)
             {
-                CountdownText = "即将下课";
+                var card = TodayLessons[i];
+                var start = ParseTime(card.Source.StartTime);
+                var end = ParseTime(card.Source.EndTime);
+                bool isCurrent = t >= start && t < end;
+                card.IsCurrent = isCurrent;
+                card.IsPast = t >= end;
+                card.IsNext = false;
+                card.IsFirst = i == 0;
+                card.Progress = isCurrent && end > start
+                    ? Math.Min(1.0, Math.Max(0.0, (t - start) / (end - start)))
+                    : 0;
+                if (isCurrent)
+                {
+                    currentCard = card;
+                }
+            }
+
+            // 下一节：当前课后的第一张；无当前课时为开始时间在未来的第一张
+            LessonCardViewModel? nextCard = null;
+            if (currentCard != null)
+            {
+                int idx = TodayLessons.IndexOf(currentCard);
+                if (idx >= 0 && idx + 1 < TodayLessons.Count)
+                {
+                    nextCard = TodayLessons[idx + 1];
+                }
             }
             else
             {
-                CountdownText = string.Format("{0} 分钟后下课",
-                    (int)Math.Ceiling(remaining.TotalMinutes));
+                nextCard = TodayLessons.FirstOrDefault(c => ParseTime(c.Source.StartTime) > t);
             }
+
+            // 当前课胶囊
+            if (currentCard != null)
+            {
+                var src = currentCard.Source;
+                var end = ParseTime(src.EndTime);
+                var remain = end - t;
+
+                _current.HasClass = true;
+                _current.ClassName = src.Name;
+                _current.DetailText = JoinNonEmpty(" · ",
+                    src.Teacher, src.Location, src.StartTime + "–" + src.EndTime);
+                _current.Progress = currentCard.Progress;
+                _current.CountdownText = remain.TotalMinutes < 1
+                    ? "即将下课"
+                    : remain.ToString(@"mm\:ss") + " 后下课";
+
+                // 顶栏课程流：当前课倒计时（"-15:30" 样式）
+                currentCard.CurrentCountdown = "-" + remain.ToString(@"mm\:ss");
+
+                // 提醒：上课 & 临近下课
+                string startKey = "start:" + src.Name + "@" + src.StartTime;
+                if (_lastStartToastKey != startKey)
+                {
+                    _lastStartToastKey = startKey;
+                    ShowToast("开始上课：" + src.Name +
+                              (string.IsNullOrEmpty(src.Location) ? "" : "（" + src.Location + "）"));
+                }
+                string endKey = "end:" + src.Name + "@" + src.StartTime;
+                if (remain.TotalMinutes <= 2 && remain.TotalMinutes > 0 && _lastEndToastKey != endKey)
+                {
+                    _lastEndToastKey = endKey;
+                    ShowToast("距下课不足 2 分钟，请做好准备");
+                }
+            }
+            else
+            {
+                _current.HasClass = false;
+            }
+
+            // 无当前课时清掉课程流中的倒计时残留
+            foreach (var card in TodayLessons.Where(c => !c.IsCurrent))
+            {
+                card.CurrentCountdown = "";
+            }
+
+            // 下一节课胶囊
+            _next.HasNext = nextCard != null;
+            if (nextCard != null)
+            {
+                var src = nextCard.Source;
+                _next.NameText = src.Name;
+                _next.InitialText = string.IsNullOrEmpty(src.Name) ? "?" : src.Name.Substring(0, 1);
+                _next.TimeText = src.StartTime;
+                var mins = (ParseTime(src.StartTime) - t).TotalMinutes;
+                _next.DetailText = JoinNonEmpty(" · ", src.Location,
+                    mins > 0 ? (int)Math.Ceiling(mins) + " 分钟后上课" : "即将上课");
+            }
+
+            IsDayEmpty = TodayLessons.Count == 0;
         }
 
-        /// <summary>异步获取天气，避免阻塞 UI 线程。</summary>
-        private async System.Threading.Tasks.Task RefreshWeatherAsync()
+        private static string JoinNonEmpty(string sep, params string[] parts)
         {
-            _lastWeatherUpdate = DateTime.Now;
-
-            try
-            {
-                // 重新读取城市，确保设置修改后能立即生效。
-                var config = ConfigService.Load<AppConfig>(Paths.ConfigFile);
-                var weather = await WeatherService.GetWeatherAsync(config.City, config.WeatherSource);
-                WeatherText = string.Format("{0} {1}℃  {2}",
-                    weather.Weather, weather.Temperature, weather.City);
-            }
-            catch (Exception ex)
-            {
-                LogService.Error("天气获取失败", ex);
-                WeatherText = "天气获取失败";
-            }
+            var list = parts.Where(p => !string.IsNullOrWhiteSpace(p));
+            return string.Join(sep, list);
         }
 
-        /// <summary>外部（设置窗口）可调用此方法立即刷新天气。</summary>
-        public void RefreshWeather()
+        /// <summary>首次运行时填充示例周课表（周一~周五），便于预览与调试。</summary>
+        private void LoadSampleLessons()
         {
-            RefreshWeatherAsync().FireAndForget();
+            void Add(int day, string name, string start, string end, string teacher, string location)
+            {
+                _schedule.Lessons.Add(new Lesson
+                {
+                    DayIndex = day, Name = name, StartTime = start, EndTime = end,
+                    Teacher = teacher, Location = location
+                });
+            }
+
+            // 周一
+            Add(0, "语文", "08:00", "08:45", "张老师", "A101");
+            Add(0, "数学", "08:55", "09:40", "李老师", "A102");
+            Add(0, "英语", "10:00", "10:45", "王老师", "A103");
+            Add(0, "物理", "10:55", "11:40", "赵老师", "B201");
+            Add(0, "化学", "14:00", "14:45", "孙老师", "B202");
+            Add(0, "生物", "14:55", "15:40", "周老师", "B203");
+
+            // 周二
+            Add(1, "数学", "08:00", "08:45", "李老师", "A102");
+            Add(1, "语文", "08:55", "09:40", "张老师", "A101");
+            Add(1, "化学", "10:00", "10:45", "孙老师", "B202");
+            Add(1, "英语", "10:55", "11:40", "王老师", "A103");
+            Add(1, "物理", "14:00", "14:45", "赵老师", "B201");
+            Add(1, "体育", "14:55", "15:40", "刘老师", "操场");
+
+            // 周三
+            Add(2, "英语", "08:00", "08:45", "王老师", "A103");
+            Add(2, "物理", "08:55", "09:40", "赵老师", "B201");
+            Add(2, "数学", "10:00", "10:45", "李老师", "A102");
+            Add(2, "语文", "10:55", "11:40", "张老师", "A101");
+            Add(2, "生物", "14:00", "14:45", "周老师", "B203");
+            Add(2, "历史", "14:55", "15:40", "吴老师", "C301");
+
+            // 周四
+            Add(3, "化学", "08:00", "08:45", "孙老师", "B202");
+            Add(3, "生物", "08:55", "09:40", "周老师", "B203");
+            Add(3, "物理", "10:00", "10:45", "赵老师", "B201");
+            Add(3, "数学", "10:55", "11:40", "李老师", "A102");
+            Add(3, "英语", "14:00", "14:45", "王老师", "A103");
+            Add(3, "美术", "14:55", "15:40", "郑老师", "D401");
+
+            // 周五
+            Add(4, "语文", "08:00", "08:45", "张老师", "A101");
+            Add(4, "英语", "08:55", "09:40", "王老师", "A103");
+            Add(4, "数学", "10:00", "10:45", "李老师", "A102");
+            Add(4, "历史", "10:55", "11:40", "吴老师", "C301");
+            Add(4, "班会", "14:00", "14:45", "张老师", "A101");
         }
 
         private static TimeSpan ParseTime(string time)
@@ -581,17 +442,73 @@ namespace ClassEasy.ViewModels
             return TimeSpan.TryParse(time, out var result) ? result : TimeSpan.Zero;
         }
 
-        private void LoadSampleLessons()
+        // ------------------------------------------------------------------
+        // 授时与天气
+        // ------------------------------------------------------------------
+
+        private async Task SyncNtpAsync()
         {
-            _schedule.Lessons = new List<Lesson>
+            await NtpTimeService.SyncOnceAsync().ConfigureAwait(true);
+            _clock.NtpWarning = NtpTimeService.ClockWarningText;
+        }
+
+        /// <summary>异步获取天气（FireAndForget，内部捕获所有异常）。</summary>
+        public async Task RefreshWeatherAsync()
+        {
+            _lastWeatherUpdate = DateTime.Now;
+            try
             {
-                new Lesson { Name = "语文", Teacher = "张老师", Location = "A101", StartTime = "08:00", EndTime = "08:45" },
-                new Lesson { Name = "数学", Teacher = "李老师", Location = "A102", StartTime = "08:55", EndTime = "09:40" },
-                new Lesson { Name = "英语", Teacher = "王老师", Location = "A103", StartTime = "10:00", EndTime = "10:45" },
-                new Lesson { Name = "物理", Teacher = "赵老师", Location = "B201", StartTime = "10:55", EndTime = "11:40" },
-                new Lesson { Name = "化学", Teacher = "孙老师", Location = "B202", StartTime = "14:00", EndTime = "14:45" },
-                new Lesson { Name = "生物", Teacher = "周老师", Location = "B203", StartTime = "14:55", EndTime = "15:40" }
-            };
+                var weather = await WeatherService.GetWeatherAsync(_config.City, _config.WeatherSource)
+                    .ConfigureAwait(true);
+                _weather.Text = weather.Temperature + "° " + weather.Weather;
+                _weather.IconGeometry = WeatherIconLibrary.GetIcon(weather.Weather);
+                _weather.City = weather.City;
+                _weather.HasWeather = true;
+            }
+            catch (Exception ex)
+            {
+                LogService.Error("天气获取失败", ex);
+                _weather.Text = "天气获取失败";
+                _weather.IconGeometry = WeatherIconLibrary.Cloud;
+                _weather.HasWeather = true;
+            }
+        }
+
+        /// <summary>外部（设置窗口）修改课表文件后调用：重新加载并立即刷新。</summary>
+        public void ReloadSchedule()
+        {
+            var fresh = ConfigService.Load<Schedule>(Paths.ScheduleFile);
+            _schedule.Lessons = fresh.Lessons ?? new System.Collections.Generic.List<Lesson>();
+            _lastDayKey = -1;
+            Tick();
+        }
+
+        // ------------------------------------------------------------------
+        // 穿透与配置联动
+        // ------------------------------------------------------------------
+
+        /// <summary>切换鼠标穿透（托盘菜单 / Ctrl+Alt+T）。</summary>
+        public void SetClickThrough(bool enabled)
+        {
+            if (IsClickThrough == enabled)
+            {
+                return;
+            }
+
+            IsClickThrough = enabled;
+            _config.ClickThroughMode = enabled;
+            ConfigService.Save(Paths.ConfigFile, _config);
+            ClickThroughChanged?.Invoke(this, enabled);
+        }
+
+        /// <summary>设置窗口保存后调用：应用新配置并通知 View。</summary>
+        public void ApplyConfig(AppConfig cfg)
+        {
+            _config = cfg;
+            ConfigService.Save(Paths.ConfigFile, _config);
+            BuildCapsules();
+            ConfigChanged?.Invoke(this, EventArgs.Empty);
+            RefreshWeatherAsync().FireAndForget();
         }
     }
 }

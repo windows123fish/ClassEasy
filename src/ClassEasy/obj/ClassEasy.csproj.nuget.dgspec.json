@@ -5,7 +5,7 @@
   },
   "projects": {
     "D:\\main\\ClassEasy\\src\\ClassEasy\\ClassEasy.csproj": {
-      "version": "1.0.0",
+      "version": "2.0.0",
       "restore": {
         "projectUniqueName": "D:\\main\\ClassEasy\\src\\ClassEasy\\ClassEasy.csproj",
         "projectName": "ClassEasy",
@@ -17,15 +17,15 @@
           "C:\\Users\\Windows_123_fish\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
-          "net48"
+          "net8.0-windows"
         ],
         "sources": {
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
-          "net48": {
-            "framework": "net48",
-            "targetAlias": "net48",
+          "net8.0-windows": {
+            "framework": "net8.0-windows7.0",
+            "targetAlias": "net8.0-windows",
             "projectReferences": {}
           }
         },
@@ -42,22 +42,88 @@
         "SdkAnalysisLevel": "10.0.400"
       },
       "frameworks": {
-        "net48": {
-          "framework": "net48",
-          "targetAlias": "net48",
+        "net8.0-windows": {
+          "framework": "net8.0-windows7.0",
+          "targetAlias": "net8.0-windows",
           "dependencies": {
-            "Microsoft.NETFramework.ReferenceAssemblies": {
+            "Avalonia": {
+              "target": "Package",
+              "version": "[11.3.17, )"
+            },
+            "Avalonia.Desktop": {
+              "target": "Package",
+              "version": "[11.3.17, )"
+            },
+            "Avalonia.Themes.Fluent": {
+              "target": "Package",
+              "version": "[11.3.17, )"
+            },
+            "CommunityToolkit.Mvvm": {
+              "target": "Package",
+              "version": "[8.4.0, )"
+            },
+            "FluentAvaloniaUI": {
+              "target": "Package",
+              "version": "[2.4.1, )"
+            },
+            "Microsoft.NET.ILLink.Tasks": {
               "suppressParent": "All",
               "target": "Package",
-              "version": "[1.0.3, )",
+              "version": "[8.0.30, )",
               "autoReferenced": true
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.400\\RuntimeIdentifierGraph.json"
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[8.0.30, 8.0.30]"
+            },
+            {
+              "name": "Microsoft.AspNetCore.App.Runtime.win-x64",
+              "version": "[8.0.30, 8.0.30]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Host.win-x64",
+              "version": "[8.0.30, 8.0.30]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[8.0.30, 8.0.30]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Runtime.win-x64",
+              "version": "[8.0.30, 8.0.30]"
+            },
+            {
+              "name": "Microsoft.WindowsDesktop.App.Ref",
+              "version": "[8.0.30, 8.0.30]"
+            },
+            {
+              "name": "Microsoft.WindowsDesktop.App.Runtime.win-x64",
+              "version": "[8.0.30, 8.0.30]"
+            }
+          ],
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.400/PortableRuntimeIdentifierGraph.json"
         }
       },
       "runtimes": {
-        "win-x86": {
+        "win-x64": {
           "#import": []
         }
       }

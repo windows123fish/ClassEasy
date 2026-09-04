@@ -19,11 +19,10 @@ namespace ClassEasy.Services
         {
             get
             {
-                // .NET Framework 4.8 可用 Assembly.GetExecutingAssembly().Location，
-                // 但 ClickOnce/阴影复制时可能不准；这里优先用 Process.MainModule。
                 try
                 {
-                    return System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName;
+                    return System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName
+                           ?? Assembly.GetExecutingAssembly().Location;
                 }
                 catch
                 {

@@ -1,119 +1,69 @@
-using System.Collections.Generic;
-using System.Windows;
-using System.Windows.Media;
-using ClassEasy.Models;
+using System;
+using System.Linq;
+using Avalonia;
+using Avalonia.Media;
+using Avalonia.Styling;
+using FluentAvalonia.Styling;
+using FluentAvalonia.UI.Media;
 
 namespace ClassEasy.Services
 {
     /// <summary>
-    /// 预设主题：定义卡片背景、边框与各文字颜色。
-    /// 颜色使用 ARGB 十六进制字符串，运行时转为画刷。
-    /// </summary>
-    public class ThemeDefinition
-    {
-        public string Name { get; set; }
-        public string CardBackground { get; set; }      // 卡片背景
-        public string CardBorder { get; set; }           // 卡片边框
-        public string TitleText { get; set; }            // 学校名 / 标题
-        public string TimeText { get; set; }             // 时间
-        public string LessonCardBackground { get; set; } // 当前课程卡片背景
-        public string LessonCardLabel { get; set; }      // "当前课程"标签
-        public string LessonCardText { get; set; }       // 课程名
-        public string LessonCardDetail { get; set; }     // 课程详情
-        public string SecondaryText { get; set; }        // 下一节课文字
-    }
-
-    /// <summary>
-    /// 主题与字体服务。将主题色写入应用级资源，供 XAML 通过 DynamicResource 引用，
-    /// 修改后所有窗口自动刷新，无需手动更新控件。
+    /// 主题服务：深色/浅色模式 + 自定义强调色（FluentAvalonia Fluent 2 风格）。
     /// </summary>
     public static class ThemeService
     {
-        public static readonly List<string> FontFamilies = new List<string>
+        /// <summary>应用主题模式（Auto / Light / Dark）与强调色（ARGB 十六进制）。</summary>
+        public static void Apply(string? accentHex, string? mode)
         {
-            "Microsoft YaHei UI", "微软雅黑", "Segoe UI", "宋体", "黑体", "楷体"
-        };
+            var app = Application.Current;
+            if (app == null) return;
 
-        public static readonly List<ThemeDefinition> Themes = new List<ThemeDefinition>
-        {
-            new ThemeDefinition
+            // 1. 深浅色模式
+            switch ((mode ?? "Auto").Trim())
             {
-                Name = "淡白", CardBackground = "#F5F8F9FB", CardBorder = "#BFD8DEE7",
-                TitleText = "#1A1A1A", TimeText = "#2C5FD5",
-                LessonCardBackground = "#FFECEEF2", LessonCardLabel = "#4A6CF7",
-                LessonCardText = "#111111", LessonCardDetail = "#4A5568", SecondaryText = "#5C6672"
-            },
-            new ThemeDefinition
-            {
-                Name = "蓝色", CardBackground = "#F2FFFFFF", CardBorder = "#DD4A6CF7",
-                TitleText = "#2D3748", TimeText = "#4A6CF7",
-                LessonCardBackground = "#334A6CF7", LessonCardLabel = "#8899DD",
-                LessonCardText = "#FFFFFF", LessonCardDetail = "#DDE6FF", SecondaryText = "#718096"
-            },
-            new ThemeDefinition
-            {
-                Name = "绿色", CardBackground = "#F2FFFFFF", CardBorder = "#DD38A169",
-                TitleText = "#2D3748", TimeText = "#38A169",
-                LessonCardBackground = "#3338A169", LessonCardLabel = "#9AE6B4",
-                LessonCardText = "#FFFFFF", LessonCardDetail = "#E6FFED", SecondaryText = "#718096"
-            },
-            new ThemeDefinition
-            {
-                Name = "紫色", CardBackground = "#F2FFFFFF", CardBorder = "#DD805AD5",
-                TitleText = "#2D3748", TimeText = "#805AD5",
-                LessonCardBackground = "#33805AD5", LessonCardLabel = "#D6BCFA",
-                LessonCardText = "#FFFFFF", LessonCardDetail = "#F3E8FF", SecondaryText = "#718096"
-            },
-            new ThemeDefinition
-            {
-                Name = "橙色", CardBackground = "#F2FFFFFF", CardBorder = "#DDED8936",
-                TitleText = "#2D3748", TimeText = "#ED8936",
-                LessonCardBackground = "#33ED8936", LessonCardLabel = "#FBD38D",
-                LessonCardText = "#FFFFFF", LessonCardDetail = "#FFF3E0", SecondaryText = "#718096"
-            },
-            new ThemeDefinition
-            {
-                Name = "深色", CardBackground = "#F01A202C", CardBorder = "#804A6CF7",
-                TitleText = "#E2E8F0", TimeText = "#7C9CFF",
-                LessonCardBackground = "#334A6CF7", LessonCardLabel = "#A3B8FF",
-                LessonCardText = "#FFFFFF", LessonCardDetail = "#D0DAFF", SecondaryText = "#9AA6B2"
+                case "Light":
+                    app.RequestedThemeVariant = ThemeVariant.Light;
+                    break;
+                case "Dark":
+                    app.RequestedThemeVariant = ThemeVariant.Dark;
+                    break;
+                default:
+                    app.RequestedThemeVariant = ThemeVariant.Default;
+                    break;
             }
-        };
 
-        private static Brush Parse(string hex)
-        {
-            return (Brush)new BrushConverter().ConvertFromString(hex);
-        }
-
-        /// <summary>根据主题名查找预设主题，找不到时返回默认（蓝色）。</summary>
-        public static ThemeDefinition FindTheme(string name)
-        {
-            return Themes.Find(t => t.Name == name) ?? Themes[0];
-        }
-
-        /// <summary>将配置中的主题、字体与字号写入应用级资源。</summary>
-        public static void Apply(AppConfig config)
-        {
-            if (Application.Current == null)
+            // 2. 强调色
+            if (string.IsNullOrWhiteSpace(accentHex))
             {
                 return;
             }
 
-            var theme = FindTheme(config.Theme);
-            var resources = Application.Current.Resources;
-
-            resources["Brush.CardBackground"] = Parse(theme.CardBackground);
-            resources["Brush.CardBorder"] = Parse(theme.CardBorder);
-            resources["Brush.TitleText"] = Parse(theme.TitleText);
-            resources["Brush.TimeText"] = Parse(theme.TimeText);
-            resources["Brush.LessonCardBackground"] = Parse(theme.LessonCardBackground);
-            resources["Brush.LessonCardLabel"] = Parse(theme.LessonCardLabel);
-            resources["Brush.LessonCardText"] = Parse(theme.LessonCardText);
-            resources["Brush.LessonCardDetail"] = Parse(theme.LessonCardDetail);
-            resources["Brush.SecondaryText"] = Parse(theme.SecondaryText);
-
-            resources["Font.AppFamily"] = new FontFamily(config.FontFamily);
-            resources["Double.TimeFontSize"] = config.TimeFontSize;
+            try
+            {
+                var theme = app.Styles.OfType<FluentAvaloniaTheme>().FirstOrDefault();
+                if (theme != null)
+                {
+                    // FluentAvaloniaTheme 在运行时改 CustomAccentColor 会自动重刷全部画刷资源
+                    var color = Color.Parse(accentHex);
+                    theme.CustomAccentColor = Color2.FromARGB(color.A, color.R, color.G, color.B);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogService.Warn("应用强调色失败: " + accentHex + " — " + ex.Message);
+            }
         }
+
+        /// <summary>预设强调色色板（类名 + 十六进制），供设置窗口使用。</summary>
+        public static readonly (string Name, string Hex)[] AccentPresets =
+        {
+            ("蓝", "#FF0078D4"),
+            ("紫", "#FF8764B8"),
+            ("青", "#FF00B7C3"),
+            ("绿", "#FF107C10"),
+            ("橙", "#FFCA5010"),
+            ("粉", "#FFC239B3"),
+        };
     }
 }
