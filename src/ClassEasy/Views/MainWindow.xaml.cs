@@ -68,14 +68,11 @@ namespace ClassEasy.Views
             // 窗口大小变化时自动重新居中（内容变化触发）
             SizeChanged += Window_SizeChanged;
 
-            // ViewModel 属性变化时强制窗口重新测量大小（天气、授时状态等变化时自动扩宽）
+            // ViewModel 属性变化时强制窗口重新测量大小（仅宽度可能变化的属性）
             ViewModel.PropertyChanged += (sender, args) =>
             {
-                // 天气、授时状态、课程文本变化时重新测量
                 if (args.PropertyName == nameof(ViewModel.WeatherText)
                     || args.PropertyName == nameof(ViewModel.ClockStatusText)
-                    || args.PropertyName == nameof(ViewModel.CurrentTime)
-                    || args.PropertyName == nameof(ViewModel.CurrentWeekText)
                     || args.PropertyName == nameof(ViewModel.DateText)
                     || args.PropertyName == nameof(ViewModel.HolidayText)
                     || args.PropertyName == nameof(ViewModel.CurrentLessonText)
