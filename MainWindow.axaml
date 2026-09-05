@@ -14,11 +14,7 @@
         MinWidth="420"
         Height="68"
         Topmost="True"
-        WindowStartupLocation="Manual">
-
-    <Design.DataContext>
-        <vm:MainWindowViewModel />
-    </Design.DataContext>
+        WindowStartupLocation="CenterScreen">
 
     <!-- 药丸卡片容器：ClipToBounds=False 保证阴影不被裁剪 -->
     <Border x:Name="CardBorder"
