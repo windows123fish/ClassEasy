@@ -10,7 +10,7 @@
         ExtendClientAreaTitleBarHeightHint="-1"
         ExtendClientAreaChromeHints="NoChrome"
         CanResize="False"
-        SizeToContent="Width"
+        Width="540"
         MinWidth="420"
         Height="68"
         Topmost="True"
