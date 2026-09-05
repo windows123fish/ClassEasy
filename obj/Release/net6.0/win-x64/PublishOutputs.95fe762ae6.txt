@@ -1,0 +1,5 @@
+d:\main\ClassEasy\bin\Release\net6.0\win-x64\publish\ClassEasy.pdb
+d:\main\ClassEasy\bin\Release\net6.0\win-x64\publish\av_libglesv2.dll
+d:\main\ClassEasy\bin\Release\net6.0\win-x64\publish\libHarfBuzzSharp.dll
+d:\main\ClassEasy\bin\Release\net6.0\win-x64\publish\libSkiaSharp.dll
+d:\main\ClassEasy\bin\Release\net6.0\win-x64\publish\ClassEasy.exe

@@ -1,31 +1,31 @@
 {
   "format": 1,
   "restore": {
-    "D:\\main\\ClassEasy\\ClassEasy.csproj": {}
+    "d:\\main\\ClassEasy\\ClassEasy.csproj": {}
   },
   "projects": {
-    "D:\\main\\ClassEasy\\ClassEasy.csproj": {
+    "d:\\main\\ClassEasy\\ClassEasy.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\main\\ClassEasy\\ClassEasy.csproj",
+        "projectUniqueName": "d:\\main\\ClassEasy\\ClassEasy.csproj",
         "projectName": "ClassEasy",
-        "projectPath": "D:\\main\\ClassEasy\\ClassEasy.csproj",
+        "projectPath": "d:\\main\\ClassEasy\\ClassEasy.csproj",
         "packagesPath": "C:\\Users\\Windows_123_fish\\.nuget\\packages\\",
-        "outputPath": "D:\\main\\ClassEasy\\obj\\",
+        "outputPath": "d:\\main\\ClassEasy\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Windows_123_fish\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
-          "net8.0"
+          "net6.0"
         ],
         "sources": {
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
-          "net8.0": {
-            "framework": "net8.0",
-            "targetAlias": "net8.0",
+          "net6.0": {
+            "framework": "net6.0",
+            "targetAlias": "net6.0",
             "projectReferences": {}
           }
         },
@@ -42,37 +42,41 @@
         "SdkAnalysisLevel": "10.0.400"
       },
       "frameworks": {
-        "net8.0": {
-          "framework": "net8.0",
-          "targetAlias": "net8.0",
+        "net6.0": {
+          "framework": "net6.0",
+          "targetAlias": "net6.0",
           "dependencies": {
             "Avalonia": {
               "target": "Package",
-              "version": "[11.3.17, )"
+              "version": "[11.0.0, )"
             },
             "Avalonia.Desktop": {
               "target": "Package",
-              "version": "[11.3.17, )"
-            },
-            "Avalonia.Diagnostics": {
-              "target": "Package",
-              "version": "[11.3.17, )"
+              "version": "[11.0.0, )"
             },
             "Avalonia.Fonts.Inter": {
               "target": "Package",
-              "version": "[11.3.17, )"
+              "version": "[11.0.0, )"
             },
             "Avalonia.Themes.Fluent": {
               "target": "Package",
-              "version": "[11.3.17, )"
+              "version": "[11.0.0, )"
             },
             "CommunityToolkit.Mvvm": {
               "target": "Package",
-              "version": "[8.4.0, )"
+              "version": "[8.2.0, )"
             },
-            "FluentAvaloniaUI": {
+            "Microsoft.NET.ILLink.Analyzers": {
+              "suppressParent": "All",
               "target": "Package",
-              "version": "[2.4.1, )"
+              "version": "[7.0.100-1.23211.1, )",
+              "autoReferenced": true
+            },
+            "Microsoft.NET.ILLink.Tasks": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[7.0.100-1.23211.1, )",
+              "autoReferenced": true
             }
           },
           "imports": [
@@ -89,19 +93,31 @@
           "downloadDependencies": [
             {
               "name": "Microsoft.AspNetCore.App.Ref",
-              "version": "[8.0.30, 8.0.30]"
+              "version": "[6.0.36, 6.0.36]"
+            },
+            {
+              "name": "Microsoft.AspNetCore.App.Runtime.win-x64",
+              "version": "[6.0.36, 6.0.36]"
             },
             {
               "name": "Microsoft.NETCore.App.Host.win-x64",
-              "version": "[8.0.30, 8.0.30]"
+              "version": "[6.0.36, 6.0.36]"
             },
             {
               "name": "Microsoft.NETCore.App.Ref",
-              "version": "[8.0.30, 8.0.30]"
+              "version": "[6.0.36, 6.0.36]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Runtime.win-x64",
+              "version": "[6.0.36, 6.0.36]"
             },
             {
               "name": "Microsoft.WindowsDesktop.App.Ref",
-              "version": "[8.0.30, 8.0.30]"
+              "version": "[6.0.36, 6.0.36]"
+            },
+            {
+              "name": "Microsoft.WindowsDesktop.App.Runtime.win-x64",
+              "version": "[6.0.36, 6.0.36]"
             }
           ],
           "frameworkReferences": {
@@ -109,7 +125,12 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.400/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.400\\RuntimeIdentifierGraph.json"
+        }
+      },
+      "runtimes": {
+        "win-x64": {
+          "#import": []
         }
       }
     }

@@ -1,125 +1,90 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:vm="using:ClassEasy"
-        mc:Ignorable="d" d:DesignWidth="480" d:DesignHeight="72"
         x:Class="ClassEasy.MainWindow"
+        xmlns:vm="using:ClassEasy.ViewModels"
         x:DataType="vm:MainWindowViewModel"
-        Width="480" Height="72"
-        SizeToContent="Width"
-        CanResize="False"
-        WindowStartupLocation="CenterScreen"
-        ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaChromeHints="NoChrome"
-        ExtendClientAreaTitleBarHeightHint="0"
+        Title="ClassEasy"
         SystemDecorations="None"
         Background="Transparent"
-        TransparencyLevelHint="AcrylicBlur, Blur"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="-1"
+        ExtendClientAreaChromeHints="NoChrome"
+        CanResize="False"
+        SizeToContent="Width"
+        MinWidth="420"
+        Height="68"
         Topmost="True"
-        FontFamily="Microsoft YaHei UI"
-        Title="ClassEasy">
+        WindowStartupLocation="Manual">
 
-    <!-- 阴影层（外层 Border 提供阴影，随卡片一起位移） -->
-    <Border Padding="16,6"
-            Background="Transparent">
+    <Design.DataContext>
+        <vm:MainWindowViewModel />
+    </Design.DataContext>
 
-        <Border Name="Card"
-                CornerRadius="34"
-                BorderBrush="#33FFFFFF"
-                BorderThickness="1"
-                BoxShadow="0 8 32 0 #00000066"
-                Padding="26,14">
+    <!-- 药丸卡片容器：ClipToBounds=False 保证阴影不被裁剪 -->
+    <Border x:Name="CardBorder"
+            Background="#D81A1A1A"
+            CornerRadius="34"
+            BorderBrush="#33FFFFFF"
+            BorderThickness="1"
+            Padding="20,12"
+            ClipToBounds="False"
+            BoxShadow="0 8 32 0 #88000000"
+            PointerEntered="CardBorder_PointerEntered"
+            PointerExited="CardBorder_PointerExited">
 
-            <Border.Styles>
-                <Style Selector="Border#Card">
-                    <Setter Property="RenderTransform">
-                        <Setter.Value>
-                            <TranslateTransform Y="0" />
-                        </Setter.Value>
-                    </Setter>
-                    <Setter Property="Transitions">
-                        <Setter.Value>
-                            <Transitions>
-                                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" />
-                                <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.2" />
-                            </Transitions>
-                        </Setter.Value>
-                    </Setter>
-                </Style>
-                <Style Selector="Border#Card:pointerover">
-                    <Setter Property="BoxShadow" Value="0 12 40 0 #00000088" />
-                    <Setter Property="RenderTransform">
-                        <Setter.Value>
-                            <TranslateTransform Y="-2" />
-                        </Setter.Value>
-                    </Setter>
-                </Style>
-            </Border.Styles>
+        <Border.Transitions>
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform"
+                                                Duration="0:0:0.2"
+                                                Easing="QuadraticEaseOut" />
+                <BoxShadowsTransition Property="BoxShadow"
+                                      Duration="0:0:0.2"
+                                      Easing="QuadraticEaseOut" />
+            </Transitions>
+        </Border.Transitions>
 
-            <!-- 亚克力毛玻璃背景 -->
-            <Border.Background>
-                <ExperimentalAcrylicMaterial>
-                    <ExperimentalAcrylicMaterial.AcrylicOpacity>0.8</ExperimentalAcrylicMaterial.AcrylicOpacity>
-                    <ExperimentalAcrylicMaterial.TintColor>#FF1A1A1A</ExperimentalAcrylicMaterial.TintColor>
-                    <ExperimentalAcrylicMaterial.TintOpacity>0.8</ExperimentalAcrylicMaterial.TintOpacity>
-                    <ExperimentalAcrylicMaterial.MaterialOpacity>0.8</ExperimentalAcrylicMaterial.MaterialOpacity>
-                    <ExperimentalAcrylicMaterial.FallbackColor>#CC1A1A1A</ExperimentalAcrylicMaterial.FallbackColor>
-                </ExperimentalAcrylicMaterial>
-            </Border.Background>
+        <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
 
-            <Grid ColumnDefinitions="Auto,*,Auto">
+            <!-- 左列：时间 + 日期 -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14"
+                        VerticalAlignment="Center">
+                <TextBlock Text="{Binding CurrentTime}"
+                           FontSize="22" FontWeight="Bold"
+                           Foreground="White"
+                           VerticalAlignment="Center" />
+                <TextBlock Text="{Binding CurrentDate}"
+                           FontSize="13" FontWeight="Normal"
+                           Foreground="White" Opacity="0.55"
+                           VerticalAlignment="Center" />
+            </StackPanel>
 
-                <!-- 左侧：时间 + 日期 -->
-                <StackPanel Grid.Column="0"
-                            Orientation="Horizontal"
-                            Spacing="14"
-                            VerticalAlignment="Center">
-                    <TextBlock Text="{Binding CurrentTime}"
-                               FontSize="24"
-                               FontWeight="Bold"
-                               Foreground="White" />
-                    <TextBlock Text="{Binding CurrentDate}"
-                               FontSize="14"
-                               FontWeight="Normal"
-                               Foreground="#8CFFFFFF"
-                               VerticalAlignment="Center" />
-                </StackPanel>
+            <!-- 中列：状态文本 + ℹ 图标（居中） -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="{Binding StatusText}"
+                           FontSize="14"
+                           Foreground="White" Opacity="0.85"
+                           VerticalAlignment="Center" />
+                <!-- 用 Path 绘制 info 图标，避免 Win7 缺少 emoji 字体导致无法渲染 -->
+                <Path Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"
+                      Width="12" Height="12" Stretch="Uniform"
+                      Fill="White" Opacity="0.25"
+                      VerticalAlignment="Center" />
+            </StackPanel>
 
-                <!-- 中间：状态文本 + 信息图标 -->
-                <StackPanel Grid.Column="1"
-                            Orientation="Horizontal"
-                            Spacing="6"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center">
-                    <TextBlock Text="{Binding StatusText}"
-                               FontSize="15"
-                               FontWeight="Normal"
-                               Foreground="#D9FFFFFF"
-                               VerticalAlignment="Center" />
-                    <TextBlock Text="&#x2139;"
-                               FontSize="13"
-                               Foreground="#40FFFFFF"
-                               VerticalAlignment="Center" />
-                </StackPanel>
+            <!-- 右列：温度 + 天气描述 -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8"
+                        HorizontalAlignment="Right" VerticalAlignment="Center">
+                <TextBlock Text="{Binding WeatherTemp}"
+                           FontSize="15" FontWeight="SemiBold"
+                           Foreground="White"
+                           VerticalAlignment="Center" />
+                <TextBlock Text="{Binding WeatherDesc}"
+                           FontSize="13"
+                           Foreground="White" Opacity="0.6"
+                           VerticalAlignment="Center" />
+            </StackPanel>
 
-                <!-- 右侧：温度 + 天气 -->
-                <StackPanel Grid.Column="2"
-                            Orientation="Horizontal"
-                            Spacing="8"
-                            VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Temperature}"
-                               FontSize="16"
-                               FontWeight="SemiBold"
-                               Foreground="White"
-                               VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding WeatherDescription}"
-                               FontSize="14"
-                               FontWeight="Normal"
-                               Foreground="#99FFFFFF"
-                               VerticalAlignment="Center" />
-                </StackPanel>
-            </Grid>
-        </Border>
+        </Grid>
     </Border>
 </Window>
