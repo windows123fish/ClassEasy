@@ -29,5 +29,14 @@ build_property.EnableCodeStyleSeverity =
 [D:/main/ClassEasy/App.axaml]
 build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
 
+[D:/main/ClassEasy/Controls/LessonCard.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
 [D:/main/ClassEasy/MainWindow.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[D:/main/ClassEasy/Views/ScheduleManagerWindow.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[D:/main/ClassEasy/Views/WeekCalendarView.axaml]
 build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml

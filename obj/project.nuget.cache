@@ -1,12 +1,13 @@
 {
   "version": 2,
-  "dgSpecHash": "UYrT9/LHp6I=",
+  "dgSpecHash": "2d+CrgH2kZg=",
   "success": true,
   "projectFilePath": "D:\\main\\ClassEasy\\ClassEasy.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Windows_123_fish\\.nuget\\packages\\avalonia\\11.0.0\\avalonia.11.0.0.nupkg.sha512",
     "C:\\Users\\Windows_123_fish\\.nuget\\packages\\avalonia.angle.windows.natives\\2.1.0.2023020321\\avalonia.angle.windows.natives.2.1.0.2023020321.nupkg.sha512",
     "C:\\Users\\Windows_123_fish\\.nuget\\packages\\avalonia.buildservices\\0.0.28\\avalonia.buildservices.0.0.28.nupkg.sha512",
+    "C:\\Users\\Windows_123_fish\\.nuget\\packages\\avalonia.controls.datagrid\\11.0.0\\avalonia.controls.datagrid.11.0.0.nupkg.sha512",
     "C:\\Users\\Windows_123_fish\\.nuget\\packages\\avalonia.desktop\\11.0.0\\avalonia.desktop.11.0.0.nupkg.sha512",
     "C:\\Users\\Windows_123_fish\\.nuget\\packages\\avalonia.fonts.inter\\11.0.0\\avalonia.fonts.inter.11.0.0.nupkg.sha512",
     "C:\\Users\\Windows_123_fish\\.nuget\\packages\\avalonia.freedesktop\\11.0.0\\avalonia.freedesktop.11.0.0.nupkg.sha512",

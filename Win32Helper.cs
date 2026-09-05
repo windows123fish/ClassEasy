@@ -37,6 +37,15 @@ public static class Win32Helper
             SetWindowLong32(hWnd, nIndex, value);
     }
 
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
+
+    /// <summary>
+    /// 弹出提示框（MB_ICONINFORMATION）。返回按钮 id，0 表示调用失败。
+    /// </summary>
+    public static void ShowMessageBox(IntPtr hwnd, string text, string caption)
+        => MessageBox(hwnd, text, caption, 0x00000040 /* MB_ICONINFORMATION */);
+
     /// <summary>
     /// 从 Alt+Tab 切换列表中隐藏窗口：添加 WS_EX_TOOLWINDOW，移除 WS_EX_APPWINDOW。
     /// </summary>

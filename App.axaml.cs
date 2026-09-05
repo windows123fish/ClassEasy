@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -6,6 +7,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using ClassEasy.ViewModels;
+using ClassEasy.Views;
 
 namespace ClassEasy;
 
@@ -105,8 +107,54 @@ public partial class App : Application
 
         menu.Add(new NativeMenuItemSeparator());
 
-        // 自定义内容：快速切换卡片状态文本
-        // 注意：Avalonia 11.0.0 的 NativeMenuItem.Menu 不会自动初始化，需手动赋值
+        // 课表子菜单：管理 + 周历 + 导入
+        var scheduleMenu = new NativeMenuItem { Header = "课表", Menu = new NativeMenu() };
+
+        var manageItem = new NativeMenuItem { Header = "课表管理..." };
+        manageItem.Click += (_, _) =>
+        {
+            try
+            {
+                var w = new ScheduleManagerWindow();
+                if (_mainWindow is not null)
+                    w.Show(_mainWindow);
+                else
+                    w.Show();
+            }
+            catch (Exception ex)
+            {
+                var hwnd = _mainWindow?.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+                Win32Helper.ShowMessageBox(hwnd, "打开失败：" + ex.Message, "错误");
+            }
+        };
+        scheduleMenu.Menu.Add(manageItem);
+
+        var weekItem = new NativeMenuItem { Header = "周历视图..." };
+        weekItem.Click += (_, _) =>
+        {
+            try
+            {
+                var w = new WeekCalendarView();
+                if (_mainWindow is not null)
+                    w.Show(_mainWindow);
+                else
+                    w.Show();
+            }
+            catch (Exception ex)
+            {
+                var hwnd = _mainWindow?.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+                Win32Helper.ShowMessageBox(hwnd, "打开失败：" + ex.Message, "错误");
+            }
+        };
+        scheduleMenu.Menu.Add(weekItem);
+
+        var importItem = new NativeMenuItem { Header = "从Excel导入..." };
+        importItem.Click += async (_, _) => await ImportScheduleAsync();
+        scheduleMenu.Menu.Add(importItem);
+
+        menu.Add(scheduleMenu);
+
+        // 自定义内容：手动切换卡片状态文本
         var statusMenu = new NativeMenuItem { Header = "状态", Menu = new NativeMenu() };
         foreach (var status in new[] { "今天没有课程", "正在上课", "课间休息", "已放学" })
         {
@@ -114,7 +162,7 @@ public partial class App : Application
             item.Click += (_, _) =>
             {
                 if (_mainWindow?.DataContext is MainWindowViewModel vm)
-                    vm.StatusText = status;
+                    vm.SetManualStatus(status);
             };
             statusMenu.Menu.Add(item);
         }
@@ -130,7 +178,10 @@ public partial class App : Application
             {
                 var icons = TrayIcon.GetIcons(this);
                 if (icons is not null && _trayIcon is not null)
+                {
                     icons.Remove(_trayIcon);
+                    _trayIcon.Dispose();
+                }
             }
             catch { }
             _mainWindow?.ForceClose();
@@ -149,5 +200,37 @@ public partial class App : Application
     {
         using var stream = AssetLoader.Open(new Uri("avares://ClassEasy/Assets/tray.png"));
         return new Bitmap(stream);
+    }
+
+    /// <summary>
+    /// 弹出文件选择框导入课表，并提示结果。
+    /// </summary>
+    private async Task ImportScheduleAsync()
+    {
+        if (_mainWindow is null)
+            return;
+
+#pragma warning disable CS0618 // OpenFileDialog 在 Avalonia 11.0 仍可用
+        var dlg = new OpenFileDialog
+        {
+            Title = "选择课表 Excel 文件",
+            AllowMultiple = false,
+            Filters =
+            {
+                new FileDialogFilter { Name = "Excel 工作簿 (*.xlsx)", Extensions = { "xlsx" } }
+            }
+        };
+        var paths = await dlg.ShowAsync(_mainWindow);
+#pragma warning restore CS0618
+
+        if (paths is null || paths.Length == 0)
+            return;
+
+        string msg = _mainWindow.DataContext is MainWindowViewModel vm
+            ? vm.ImportSchedule(paths[0])
+            : "未就绪。";
+
+        var hwnd = _mainWindow.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+        Win32Helper.ShowMessageBox(hwnd, msg, "导入课表");
     }
 }

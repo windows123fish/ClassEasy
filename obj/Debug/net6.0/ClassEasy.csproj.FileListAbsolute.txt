@@ -71,3 +71,4 @@ d:\main\ClassEasy\obj\Debug\net6.0\ClassEasy.pdb
 d:\main\ClassEasy\obj\Debug\net6.0\ClassEasy.csproj.Up2Date
 d:\main\ClassEasy\obj\Debug\net6.0\ClassEasy.genruntimeconfig.cache
 d:\main\ClassEasy\obj\Debug\net6.0\ref\ClassEasy.dll
+d:\main\ClassEasy\bin\Debug\net6.0\Avalonia.Controls.DataGrid.dll

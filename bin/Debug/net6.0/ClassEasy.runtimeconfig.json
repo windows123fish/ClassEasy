@@ -6,7 +6,8 @@
       "version": "6.0.0"
     },
     "configProperties": {
-      "System.Runtime.InteropServices.BuiltInComInterop.IsSupported": true
+      "System.Runtime.InteropServices.BuiltInComInterop.IsSupported": true,
+      "System.Runtime.TieredCompilation": false
     }
   }
 }

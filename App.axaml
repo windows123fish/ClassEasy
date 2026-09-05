@@ -4,5 +4,6 @@
     <Application.Styles>
         <!-- 仅使用 Avalonia 原生 Fluent 主题，不引入第三方 FluentAvaloniaUI -->
         <FluentTheme />
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
     </Application.Styles>
 </Application>

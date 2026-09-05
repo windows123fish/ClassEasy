@@ -1,0 +1,106 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ClassEasy.Views.ScheduleManagerWindow"
+        xmlns:models="using:ClassEasy.Models"
+        Title="课表管理"
+        Width="900" Height="640"
+        WindowStartupLocation="CenterScreen"
+        Background="#FF1E1E1E"
+        Foreground="White">
+
+    <Window.Styles>
+        <Style Selector="Button">
+            <Setter Property="Background" Value="#FF3D3D3D" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="#55FFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="CornerRadius" Value="4" />
+        </Style>
+        <Style Selector="Button:pointerover">
+            <Setter Property="Background" Value="#FF505050" />
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="Background" Value="#FF2D2D2D" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="#33FFFFFF" />
+        </Style>
+        <Style Selector="ComboBox">
+            <Setter Property="Background" Value="#FF2D2D2D" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="#33FFFFFF" />
+        </Style>
+    </Window.Styles>
+
+    <Grid Margin="20" RowDefinitions="Auto,Auto,*,Auto,Auto">
+
+        <!-- 标题 -->
+        <TextBlock Grid.Row="0" Text="课表管理" FontSize="20" FontWeight="Bold"
+                   Margin="0,0,0,12" />
+
+        <!-- 课表选择 + 时间表 -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
+            <TextBlock Text="课表" VerticalAlignment="Center" />
+            <ComboBox x:Name="PlanBox" Width="200" SelectionChanged="PlanBox_SelectionChanged" />
+            <TextBlock Text="时间表" VerticalAlignment="Center" Margin="8,0,0,0" />
+            <ComboBox x:Name="LayoutBox" Width="180" />
+            <Button Content="设为激活" Click="SetActiveBtn_Click" />
+        </StackPanel>
+
+        <!-- 课程列表 -->
+        <Border Grid.Row="2" Background="#FF2D2D2D" CornerRadius="8"
+                BorderBrush="#33FFFFFF" BorderThickness="1" Margin="0,0,0,12">
+            <DataGrid x:Name="CourseGrid" Margin="8"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      SelectionMode="Single"
+                      GridLinesVisibility="Horizontal"
+                      Background="Transparent"
+                      Foreground="White"
+                      RowBackground="#FF2D2D2D"
+                      HorizontalGridLinesBrush="#22FFFFFF"
+                      SelectionChanged="CourseGrid_SelectionChanged">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="节次" Binding="{Binding IndexDisplay, Mode=OneWay}" Width="60" />
+                    <DataGridTextColumn Header="课程" Binding="{Binding SubjectName, Mode=OneWay}" Width="140" />
+                    <DataGridTextColumn Header="教师" Binding="{Binding TeacherName, Mode=OneWay}" Width="100" />
+                    <DataGridTextColumn Header="时间" Binding="{Binding TimeRange, Mode=OneWay}" Width="120" />
+                    <DataGridTextColumn Header="状态" Binding="{Binding StatusText, Mode=OneWay}" Width="80" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <!-- 表单区 -->
+        <Border Grid.Row="3" Background="#FF2D2D2D" CornerRadius="8"
+                BorderBrush="#33FFFFFF" BorderThickness="1" Padding="16" Margin="0,0,0,12">
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto">
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="科目" VerticalAlignment="Center" Margin="0,0,12,8" />
+                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+                    <ComboBox x:Name="SubjectBox" Width="180" />
+                    <Button Content="新增科目" Click="NewSubjectBtn_Click" />
+                </StackPanel>
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="时间" VerticalAlignment="Center" Margin="0,0,12,8" />
+                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+                    <TextBox x:Name="StartBox" Width="80" Watermark="08:00" />
+                    <TextBlock Text="~" VerticalAlignment="Center" />
+                    <TextBox x:Name="EndBox" Width="80" Watermark="08:45" />
+                    <Button Content="更新时间点" Click="UpdateTimePointBtn_Click" />
+                </StackPanel>
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="提示" VerticalAlignment="Center" />
+                <TextBlock Grid.Row="2" Grid.Column="1" x:Name="FormTip"
+                           Foreground="#FFAAAAAA" FontSize="12" Text="选中课程行后可修改科目或时间" />
+            </Grid>
+        </Border>
+
+        <!-- 按钮区 -->
+        <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+            <Button Content="保存课表" Click="SaveBtn_Click" />
+            <Button Content="新增课表" Click="NewPlanBtn_Click" />
+            <Button Content="删除课表" Click="DeletePlanBtn_Click" />
+            <Button Content="从Excel导入..." Click="ImportBtn_Click" />
+            <Button Content="关闭" Click="CloseBtn_Click" />
+        </StackPanel>
+    </Grid>
+</Window>

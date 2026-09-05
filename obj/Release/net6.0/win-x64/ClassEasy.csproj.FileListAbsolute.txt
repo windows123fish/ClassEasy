@@ -273,3 +273,4 @@ d:\main\ClassEasy\obj\Release\net6.0\win-x64\ClassEasy.pdb
 d:\main\ClassEasy\obj\Release\net6.0\win-x64\ClassEasy.csproj.Up2Date
 d:\main\ClassEasy\obj\Release\net6.0\win-x64\ClassEasy.genruntimeconfig.cache
 d:\main\ClassEasy\obj\Release\net6.0\win-x64\ref\ClassEasy.dll
+d:\main\ClassEasy\bin\Release\net6.0\win-x64\Avalonia.Controls.DataGrid.dll

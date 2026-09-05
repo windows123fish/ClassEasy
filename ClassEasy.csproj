@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
-    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <!-- 降低内存占用：关闭分层编译，减少即时编译开销 -->
     <TieredCompilation>false</TieredCompilation>
     <!-- Win7 兼容：不使用 Win10+ 专属 API -->
@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.0.0" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.0.0" />
     <PackageReference Include="Avalonia.Desktop" Version="11.0.0" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.0" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.0.0" />

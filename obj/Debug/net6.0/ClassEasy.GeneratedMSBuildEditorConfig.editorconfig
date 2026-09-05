@@ -31,3 +31,9 @@ build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
 
 [d:/main/ClassEasy/MainWindow.axaml]
 build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[d:/main/ClassEasy/Views/ScheduleManagerWindow.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[d:/main/ClassEasy/Views/WeekCalendarView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
