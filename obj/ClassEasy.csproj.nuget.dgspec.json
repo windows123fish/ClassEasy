@@ -69,18 +69,6 @@
             "CommunityToolkit.Mvvm": {
               "target": "Package",
               "version": "[8.2.0, )"
-            },
-            "Microsoft.NET.ILLink.Analyzers": {
-              "suppressParent": "All",
-              "target": "Package",
-              "version": "[7.0.100-1.23211.1, )",
-              "autoReferenced": true
-            },
-            "Microsoft.NET.ILLink.Tasks": {
-              "suppressParent": "All",
-              "target": "Package",
-              "version": "[7.0.100-1.23211.1, )",
-              "autoReferenced": true
             }
           },
           "imports": [
@@ -100,11 +88,7 @@
               "version": "[6.0.36, 6.0.36]"
             },
             {
-              "name": "Microsoft.AspNetCore.App.Runtime.win-x64",
-              "version": "[6.0.36, 6.0.36]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Host.win-x64",
+              "name": "Microsoft.NETCore.App.Host.win-x86",
               "version": "[6.0.36, 6.0.36]"
             },
             {
@@ -112,15 +96,7 @@
               "version": "[6.0.36, 6.0.36]"
             },
             {
-              "name": "Microsoft.NETCore.App.Runtime.win-x64",
-              "version": "[6.0.36, 6.0.36]"
-            },
-            {
               "name": "Microsoft.WindowsDesktop.App.Ref",
-              "version": "[6.0.36, 6.0.36]"
-            },
-            {
-              "name": "Microsoft.WindowsDesktop.App.Runtime.win-x64",
               "version": "[6.0.36, 6.0.36]"
             }
           ],
@@ -133,7 +109,7 @@
         }
       },
       "runtimes": {
-        "win-x64": {
+        "win-x86": {
           "#import": []
         }
       }

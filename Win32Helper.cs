@@ -13,6 +13,31 @@ public static class Win32Helper
     private const int GWL_EXSTYLE = -20;
     private const int WS_EX_TOOLWINDOW = 0x00000080;
     private const int WS_EX_APPWINDOW = 0x00040000;
+    private const int WS_EX_TRANSPARENT = 0x00000020;
+    private const int WS_EX_LAYERED = 0x00080000;
+    private const uint LWA_ALPHA = 0x00000002;
+
+    [DllImport("user32.dll")]
+    public static extern bool GetCursorPos(out POINT lpPoint);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct POINT
+    {
+        public int X;
+        public int Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [DllImport("user32.dll")]
+    public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
     [DllImport("user32.dll", EntryPoint = "GetWindowLong")]
     private static extern int GetWindowLong32(IntPtr hWnd, int nIndex);
@@ -57,5 +82,45 @@ public static class Win32Helper
         var exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
         exStyle = (exStyle | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW;
         SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
+        int X, int Y, int cx, int cy, uint uFlags);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetLayeredWindowAttributes(IntPtr hwnd, uint crKey, byte bAlpha, uint dwFlags);
+
+    /// <summary>
+    /// 设置窗口点击穿透：添加/移除 WS_EX_TRANSPARENT。
+    /// 注意：顶级窗口的 WS_EX_TRANSPARENT 必须配合 WS_EX_LAYERED 才能让命中测试穿透，
+    /// 因此开启穿透时同时设置 WS_EX_LAYERED 并用 SetLayeredWindowAttributes 保持窗口不透明。
+    /// </summary>
+    public static void SetWindowTransparent(IntPtr hwnd, bool transparent)
+    {
+        if (hwnd == IntPtr.Zero)
+            return;
+
+        var exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+        if (transparent)
+        {
+            exStyle |= WS_EX_TRANSPARENT | WS_EX_LAYERED;
+            SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+            // 保持窗口完全不透明（alpha=255），仅用 LAYERED 让 TRANSPARENT 生效
+            SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
+        }
+        else
+        {
+            exStyle &= ~WS_EX_TRANSPARENT;
+            // 保留 WS_EX_LAYERED，避免反复开关造成闪烁；alpha=255 不影响视觉
+            SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+            SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
+        }
+
+        // 强制系统刷新窗口命中测试缓存
+        SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0,
+            0x0020 /* SWP_FRAMECHANGED */ | 0x0004 /* SWP_NOMOVE */ |
+            0x0001 /* SWP_NOSIZE */ | 0x0002 /* SWP_NOZORDER */ |
+            0x0008 /* SWP_NOACTIVATE */ | 0x0010 /* SWP_NOOWNERZORDER */);
     }
 }

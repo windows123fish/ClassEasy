@@ -1,8 +1,4 @@
 is_global = true
-build_property.EnableAotAnalyzer = 
-build_property.EnableSingleFileAnalyzer = 
-build_property.EnableTrimAnalyzer = 
-build_property.IncludeAllContentForSelfExtract = 
 build_property.AvaloniaNameGeneratorIsEnabled = true
 build_property.AvaloniaNameGeneratorBehavior = InitializeComponent
 build_property.AvaloniaNameGeneratorDefaultFieldModifier = internal
@@ -27,6 +23,9 @@ build_property.EffectiveAnalysisLevelStyle = 6.0
 build_property.EnableCodeStyleSeverity = 
 
 [d:/main/ClassEasy/App.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[d:/main/ClassEasy/Controls/LessonCard.axaml]
 build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
 
 [d:/main/ClassEasy/MainWindow.axaml]

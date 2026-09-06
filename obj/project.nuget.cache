@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "2d+CrgH2kZg=",
+  "dgSpecHash": "Iu3cv9LMNKM=",
   "success": true,
   "projectFilePath": "D:\\main\\ClassEasy\\ClassEasy.csproj",
   "expectedPackageFiles": [
@@ -24,8 +24,6 @@
     "C:\\Users\\Windows_123_fish\\.nuget\\packages\\harfbuzzsharp.nativeassets.webassembly\\2.8.2.3\\harfbuzzsharp.nativeassets.webassembly.2.8.2.3.nupkg.sha512",
     "C:\\Users\\Windows_123_fish\\.nuget\\packages\\harfbuzzsharp.nativeassets.win32\\2.8.2.3\\harfbuzzsharp.nativeassets.win32.2.8.2.3.nupkg.sha512",
     "C:\\Users\\Windows_123_fish\\.nuget\\packages\\microcom.runtime\\0.11.0\\microcom.runtime.0.11.0.nupkg.sha512",
-    "C:\\Users\\Windows_123_fish\\.nuget\\packages\\microsoft.net.illink.analyzers\\7.0.100-1.23211.1\\microsoft.net.illink.analyzers.7.0.100-1.23211.1.nupkg.sha512",
-    "C:\\Users\\Windows_123_fish\\.nuget\\packages\\microsoft.net.illink.tasks\\7.0.100-1.23211.1\\microsoft.net.illink.tasks.7.0.100-1.23211.1.nupkg.sha512",
     "C:\\Users\\Windows_123_fish\\.nuget\\packages\\microsoft.win32.systemevents\\6.0.0\\microsoft.win32.systemevents.6.0.0.nupkg.sha512",
     "C:\\Users\\Windows_123_fish\\.nuget\\packages\\skiasharp\\2.88.3\\skiasharp.2.88.3.nupkg.sha512",
     "C:\\Users\\Windows_123_fish\\.nuget\\packages\\skiasharp.nativeassets.linux\\2.88.3\\skiasharp.nativeassets.linux.2.88.3.nupkg.sha512",
@@ -38,12 +36,9 @@
     "C:\\Users\\Windows_123_fish\\.nuget\\packages\\system.numerics.vectors\\4.5.0\\system.numerics.vectors.4.5.0.nupkg.sha512",
     "C:\\Users\\Windows_123_fish\\.nuget\\packages\\tmds.dbus.protocol\\0.15.0\\tmds.dbus.protocol.0.15.0.nupkg.sha512",
     "C:\\Users\\Windows_123_fish\\.nuget\\packages\\microsoft.netcore.app.ref\\6.0.36\\microsoft.netcore.app.ref.6.0.36.nupkg.sha512",
-    "C:\\Users\\Windows_123_fish\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\6.0.36\\microsoft.netcore.app.runtime.win-x64.6.0.36.nupkg.sha512",
     "C:\\Users\\Windows_123_fish\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\6.0.36\\microsoft.windowsdesktop.app.ref.6.0.36.nupkg.sha512",
-    "C:\\Users\\Windows_123_fish\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\6.0.36\\microsoft.windowsdesktop.app.runtime.win-x64.6.0.36.nupkg.sha512",
     "C:\\Users\\Windows_123_fish\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\6.0.36\\microsoft.aspnetcore.app.ref.6.0.36.nupkg.sha512",
-    "C:\\Users\\Windows_123_fish\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\6.0.36\\microsoft.aspnetcore.app.runtime.win-x64.6.0.36.nupkg.sha512",
-    "C:\\Users\\Windows_123_fish\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\6.0.36\\microsoft.netcore.app.host.win-x64.6.0.36.nupkg.sha512"
+    "C:\\Users\\Windows_123_fish\\.nuget\\packages\\microsoft.netcore.app.host.win-x86\\6.0.36\\microsoft.netcore.app.host.win-x86.6.0.36.nupkg.sha512"
   ],
   "logs": []
 }
