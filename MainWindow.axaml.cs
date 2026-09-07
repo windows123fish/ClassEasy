@@ -92,27 +92,26 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 鼠标进入：淡化 + 点击穿透。
-    /// 设 WS_EX_TRANSPARENT 后 Avalonia 收不到 PointerExited，改用定时器检测。
-    /// 触摸输入不触发此效果（触屏没有 hover 概念）。
+    /// 鼠标进入：隐藏亚克力背景层 + 高光条，内容变淡到 15%，
+    /// 同时开启 Win32 点击穿透。触摸输入不触发此效果。
     /// </summary>
     private void RootBorder_PointerEntered(object? sender, Avalonia.Input.PointerEventArgs e)
     {
-        // 触摸/笔输入不启用 hover 效果
         if (e.Pointer.Type != PointerType.Mouse)
             return;
 
         var hwnd = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
         if (hwnd == IntPtr.Zero) return;
 
-        RootBorder.Opacity = 0.35;
+        AcrylicBackground.IsVisible = false;
+        TopHighlight.IsVisible = false;
+        ContentPanel.Opacity = 0.15;
         Win32Helper.SetWindowTransparent(hwnd, true);
         _hoverTimer.Start();
     }
 
     /// <summary>
-    /// 定时器：检测鼠标是否离开窗口 bounds，离开则取消穿透。
-    /// 鼠标仍在窗口内时，每 100ms 重新应用穿透样式，防止 Avalonia 渲染循环重置 GWL_EXSTYLE。
+    /// 定时器：检测鼠标是否离开窗口 bounds，离开则恢复背景层、内容不透明、取消穿透。
     /// </summary>
     private void OnHoverTimerTick(object? sender, ElapsedEventArgs e)
     {
@@ -122,20 +121,19 @@ public partial class MainWindow : Window
         Win32Helper.GetCursorPos(out var pt);
         Win32Helper.GetWindowRect(hwnd, out var rc);
 
-        // 留 2px 容差，避免边缘抖动
         if (pt.X < rc.Left + 2 || pt.X > rc.Right - 2 || pt.Y < rc.Top + 2 || pt.Y > rc.Bottom - 2)
         {
-            // 鼠标已离开窗口
             Dispatcher.UIThread.InvokeAsync(() =>
             {
-                RootBorder.Opacity = 1.0;
+                AcrylicBackground.IsVisible = true;
+                TopHighlight.IsVisible = true;
+                ContentPanel.Opacity = 1.0;
                 Win32Helper.SetWindowTransparent(hwnd, false);
             });
             _hoverTimer.Stop();
         }
         else
         {
-            // 鼠标仍在窗口内：重新应用穿透样式，对抗 Avalonia 渲染循环对 GWL_EXSTYLE 的重置
             Win32Helper.ReassertWindowTransparent(hwnd);
         }
     }

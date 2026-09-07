@@ -88,7 +88,11 @@
               "version": "[6.0.36, 6.0.36]"
             },
             {
-              "name": "Microsoft.NETCore.App.Host.win-x86",
+              "name": "Microsoft.AspNetCore.App.Runtime.win-x64",
+              "version": "[6.0.36, 6.0.36]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Host.win-x64",
               "version": "[6.0.36, 6.0.36]"
             },
             {
@@ -96,7 +100,15 @@
               "version": "[6.0.36, 6.0.36]"
             },
             {
+              "name": "Microsoft.NETCore.App.Runtime.win-x64",
+              "version": "[6.0.36, 6.0.36]"
+            },
+            {
               "name": "Microsoft.WindowsDesktop.App.Ref",
+              "version": "[6.0.36, 6.0.36]"
+            },
+            {
+              "name": "Microsoft.WindowsDesktop.App.Runtime.win-x64",
               "version": "[6.0.36, 6.0.36]"
             }
           ],
@@ -109,7 +121,7 @@
         }
       },
       "runtimes": {
-        "win-x86": {
+        "win-x64": {
           "#import": []
         }
       }

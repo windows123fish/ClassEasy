@@ -601,7 +601,7 @@
         }
       }
     },
-    "net6.0/win-x86": {
+    "net6.0/win-x64": {
       "Avalonia/11.0.0": {
         "type": "package",
         "dependencies": {
@@ -682,7 +682,7 @@
       "Avalonia.Angle.Windows.Natives/2.1.0.2023020321": {
         "type": "package",
         "native": {
-          "runtimes/win-x86/native/av_libglesv2.dll": {}
+          "runtimes/win-x64/native/av_libglesv2.dll": {}
         }
       },
       "Avalonia.BuildServices/0.0.28": {
@@ -941,7 +941,7 @@
           "lib/net5.0/_._": {}
         },
         "native": {
-          "runtimes/win-x86/native/libHarfBuzzSharp.dll": {}
+          "runtimes/win-x64/native/libHarfBuzzSharp.dll": {}
         }
       },
       "MicroCom.Runtime/0.11.0": {
@@ -1029,7 +1029,7 @@
           "lib/net5.0/_._": {}
         },
         "native": {
-          "runtimes/win-x86/native/libSkiaSharp.dll": {}
+          "runtimes/win-x64/native/libSkiaSharp.dll": {}
         }
       },
       "System.ComponentModel.Annotations/4.5.0": {
@@ -2209,7 +2209,11 @@
             "version": "[6.0.36, 6.0.36]"
           },
           {
-            "name": "Microsoft.NETCore.App.Host.win-x86",
+            "name": "Microsoft.AspNetCore.App.Runtime.win-x64",
+            "version": "[6.0.36, 6.0.36]"
+          },
+          {
+            "name": "Microsoft.NETCore.App.Host.win-x64",
             "version": "[6.0.36, 6.0.36]"
           },
           {
@@ -2217,7 +2221,15 @@
             "version": "[6.0.36, 6.0.36]"
           },
           {
+            "name": "Microsoft.NETCore.App.Runtime.win-x64",
+            "version": "[6.0.36, 6.0.36]"
+          },
+          {
             "name": "Microsoft.WindowsDesktop.App.Ref",
+            "version": "[6.0.36, 6.0.36]"
+          },
+          {
+            "name": "Microsoft.WindowsDesktop.App.Runtime.win-x64",
             "version": "[6.0.36, 6.0.36]"
           }
         ],
@@ -2230,7 +2242,7 @@
       }
     },
     "runtimes": {
-      "win-x86": {
+      "win-x64": {
         "#import": []
       }
     }

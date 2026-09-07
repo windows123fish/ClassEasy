@@ -17,8 +17,6 @@
     <Border x:Name="RootBorder"
             CornerRadius="0 0 12 12"
             ClipToBounds="True"
-            BorderBrush="#15FFFFFF"
-            BorderThickness="0.5"
             PointerEntered="RootBorder_PointerEntered"
             PointerPressed="RootBorder_PointerPressed"
             PointerMoved="RootBorder_PointerMoved"
@@ -34,7 +32,7 @@
         </Border.Transitions>
         <Grid>
             <!-- 背景：顶部微亮到底部微暗，模拟光线折射 -->
-            <Border>
+            <Border x:Name="AcrylicBackground">
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                         <GradientStop Offset="0" Color="#D0262626" />
@@ -43,11 +41,13 @@
                 </Border.Background>
             </Border>
             <!-- 顶部 1px 高光线：模拟光线射入玻璃 -->
-            <Border Height="1"
+            <Border x:Name="TopHighlight"
+                    Height="1"
                     VerticalAlignment="Top"
                     Background="#22FFFFFF" />
             <!-- 内容 -->
-            <StackPanel Orientation="Horizontal"
+            <StackPanel x:Name="ContentPanel"
+                        Orientation="Horizontal"
                         Spacing="16"
                         VerticalAlignment="Center"
                         HorizontalAlignment="Center">

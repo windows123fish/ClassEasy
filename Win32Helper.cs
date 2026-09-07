@@ -93,8 +93,8 @@ public static class Win32Helper
 
     /// <summary>
     /// 设置窗口点击穿透：添加/移除 WS_EX_TRANSPARENT。
-    /// 注意：顶级窗口的 WS_EX_TRANSPARENT 必须配合 WS_EX_LAYERED 才能让命中测试穿透。
-    /// 首次开启时同步设置 LAYERED + alpha=255；关闭时一并清除 LAYERED 以恢复软件渲染合成路径。
+    /// 视觉透明由 Avalonia 层控制（隐藏背景 + 调整 Opacity），
+    /// Win32 层只做鼠标穿透，避免与软件渲染冲突。
     /// </summary>
     public static void SetWindowTransparent(IntPtr hwnd, bool transparent)
     {
@@ -103,24 +103,15 @@ public static class Win32Helper
 
         var exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
         if (transparent)
-        {
-            exStyle |= WS_EX_TRANSPARENT | WS_EX_LAYERED;
-            SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
-            // 保持窗口完全不透明（alpha=255），仅用 LAYERED 让 TRANSPARENT 生效
-            SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
-            RefreshWindowStyle(hwnd);
-        }
+            exStyle |= WS_EX_TRANSPARENT;
         else
-        {
-            exStyle &= ~(WS_EX_TRANSPARENT | WS_EX_LAYERED);
-            SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
-            RefreshWindowStyle(hwnd);
-        }
+            exStyle &= ~WS_EX_TRANSPARENT;
+        SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+        RefreshWindowStyle(hwnd);
     }
 
     /// <summary>
-    /// 定时器周期调用：仅在 EXSTYLE 已包含 TRANSPARENT 时再强制刷新样式缓存，
-    /// 避免每 100ms 反复走 LAYERED 合成路径造成的闪烁和 CPU 浪费。
+    /// 定时器周期调用：仅在 TRANSPARENT 被 Avalonia 渲染循环重置时补回。
     /// </summary>
     public static void ReassertWindowTransparent(IntPtr hwnd)
     {
@@ -128,14 +119,12 @@ public static class Win32Helper
             return;
 
         var exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
-        // 仅在确实被外部重置时才补回，避免无谓的 SetWindowPos
         if ((exStyle & WS_EX_TRANSPARENT) == 0)
         {
-            exStyle |= WS_EX_TRANSPARENT | WS_EX_LAYERED;
+            exStyle |= WS_EX_TRANSPARENT;
             SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
-            SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
+            RefreshWindowStyle(hwnd);
         }
-        RefreshWindowStyle(hwnd);
     }
 
     private static void RefreshWindowStyle(IntPtr hwnd)
