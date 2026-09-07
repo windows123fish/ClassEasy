@@ -8,12 +8,11 @@
         SystemDecorations="None"
         Background="Transparent"
         CanResize="False"
+        FontFamily="Microsoft YaHei UI, Segoe UI, Noto Sans SC, sans-serif"
         Width="900"
         Height="48"
         Topmost="True"
         WindowStartupLocation="CenterScreen">
-
-    <!-- 亚克力模拟：半透明渐变 + 顶部高光条 + 玻璃边缘 -->
     <Border x:Name="RootBorder"
             CornerRadius="0 0 12 12"
             ClipToBounds="True"
@@ -26,8 +25,8 @@
         <Border.Transitions>
             <Transitions>
                 <DoubleTransition Property="Opacity"
-                                  Duration="0:0:0.25"
-                                  Easing="CubicEaseOut" />
+                                Duration="0:0:0.25"
+                                Easing="CubicEaseOut" />
             </Transitions>
         </Border.Transitions>
         <Grid>

@@ -15,7 +15,8 @@ public static class Win32Helper
     private const int WS_EX_APPWINDOW = 0x00040000;
     private const int WS_EX_TRANSPARENT = 0x00000020;
     private const int WS_EX_LAYERED = 0x00080000;
-    private const uint LWA_ALPHA = 0x00000002;
+    private const uint LWA_COLORKEY = 0x00000001;
+    private const uint LWA_ALPHA    = 0x00000002;
 
     [DllImport("user32.dll")]
     public static extern bool GetCursorPos(out POINT lpPoint);
@@ -92,37 +93,58 @@ public static class Win32Helper
     private static extern bool SetLayeredWindowAttributes(IntPtr hwnd, uint crKey, byte bAlpha, uint dwFlags);
 
     /// <summary>
-    /// 设置窗口点击穿透：添加/移除 WS_EX_TRANSPARENT。
-    /// 视觉透明由 Avalonia 层控制（隐藏背景 + 调整 Opacity），
-    /// Win32 层只做鼠标穿透，避免与软件渲染冲突。
+    /// 启用 WS_EX_LAYERED（ColorKey / Alpha 生效的前提）。窗口创建后调用一次即可。
+    /// </summary>
+    public static void EnableLayered(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero) return;
+        var exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+        if ((exStyle & WS_EX_LAYERED) == 0)
+        {
+            exStyle |= WS_EX_LAYERED;
+            SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+            RefreshWindowStyle(hwnd);
+        }
+    }
+
+    /// <summary>
+    /// hover 进入：纯黑背景(ColorKey)变透明 + 点击穿透。
+    /// 要求窗口 Background 已设为 Black，这样 ColorKey 只透明黑底，保留文字。
     /// </summary>
     public static void SetWindowTransparent(IntPtr hwnd, bool transparent)
     {
-        if (hwnd == IntPtr.Zero)
-            return;
+        if (hwnd == IntPtr.Zero) return;
 
         var exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
         if (transparent)
+        {
             exStyle |= WS_EX_TRANSPARENT;
+            SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+            // 纯黑(0x000000)变完全透明；alpha=0 配合 COLORKEY 使用
+            SetLayeredWindowAttributes(hwnd, 0x000000, 0, LWA_COLORKEY);
+        }
         else
+        {
             exStyle &= ~WS_EX_TRANSPARENT;
-        SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+            SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+            // 关闭 ColorKey，恢复 alpha=255 完全不透明
+            SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
+        }
         RefreshWindowStyle(hwnd);
     }
 
     /// <summary>
-    /// 定时器周期调用：仅在 TRANSPARENT 被 Avalonia 渲染循环重置时补回。
+    /// 定时器：若 TRANSPARENT 被 Avalonia 重置则补回。
     /// </summary>
     public static void ReassertWindowTransparent(IntPtr hwnd)
     {
-        if (hwnd == IntPtr.Zero)
-            return;
-
+        if (hwnd == IntPtr.Zero) return;
         var exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
         if ((exStyle & WS_EX_TRANSPARENT) == 0)
         {
             exStyle |= WS_EX_TRANSPARENT;
             SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+            SetLayeredWindowAttributes(hwnd, 0x000000, 0, LWA_COLORKEY);
             RefreshWindowStyle(hwnd);
         }
     }

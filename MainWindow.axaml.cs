@@ -12,6 +12,7 @@ public partial class MainWindow : Window
 {
     private bool _forceClose;
     private readonly System.Timers.Timer _hoverTimer;
+    private int _hoverLeaveCount; // 连续离开计数器（防边缘抖动）
 
     // 触摸手势状态
     private readonly System.Timers.Timer _longPressTimer;
@@ -54,7 +55,9 @@ public partial class MainWindow : Window
             }
         }
 
-        Win32Helper.HideFromAltTab(TryGetPlatformHandle()?.Handle ?? IntPtr.Zero);
+        var hwnd = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+        Win32Helper.HideFromAltTab(hwnd);
+        Win32Helper.EnableLayered(hwnd);
         (Application.Current as App)?.EnsureTray();
     }
 
@@ -92,8 +95,9 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 鼠标进入：隐藏亚克力背景层 + 高光条，内容变淡到 15%，
-    /// 同时开启 Win32 点击穿透。触摸输入不触发此效果。
+    /// 鼠标进入：窗口背景改纯黑 → ColorKey 把黑底变透明，
+    /// 隐藏亚克力层，内容变淡到 15%，同时开启点击穿透。
+    /// 触摸输入不触发此效果。
     /// </summary>
     private void RootBorder_PointerEntered(object? sender, Avalonia.Input.PointerEventArgs e)
     {
@@ -103,6 +107,8 @@ public partial class MainWindow : Window
         var hwnd = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
         if (hwnd == IntPtr.Zero) return;
 
+        _hoverLeaveCount = 0; // 重置离开计数器
+        Background = Avalonia.Media.Brushes.Black;
         AcrylicBackground.IsVisible = false;
         TopHighlight.IsVisible = false;
         ContentPanel.Opacity = 0.15;
@@ -111,7 +117,8 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 定时器：检测鼠标是否离开窗口 bounds，离开则恢复背景层、内容不透明、取消穿透。
+    /// 定时器：检测鼠标是否离开窗口 bounds。
+    /// 使用 20px 容差 + 连续 3 次（300ms）确认离开，防止边缘抖动导致的闪烁。
     /// </summary>
     private void OnHoverTimerTick(object? sender, ElapsedEventArgs e)
     {
@@ -121,19 +128,29 @@ public partial class MainWindow : Window
         Win32Helper.GetCursorPos(out var pt);
         Win32Helper.GetWindowRect(hwnd, out var rc);
 
-        if (pt.X < rc.Left + 2 || pt.X > rc.Right - 2 || pt.Y < rc.Top + 2 || pt.Y > rc.Bottom - 2)
+        // 20px 容差：必须离开窗口超过 20px 才算真正离开，避免边缘抖动
+        if (pt.X < rc.Left - 20 || pt.X > rc.Right + 20 || pt.Y < rc.Top - 20 || pt.Y > rc.Bottom + 20)
         {
-            Dispatcher.UIThread.InvokeAsync(() =>
+            _hoverLeaveCount++;
+            // 连续 3 次（300ms）确认离开才真正恢复，防止快速来回跨越边界
+            if (_hoverLeaveCount >= 3)
             {
-                AcrylicBackground.IsVisible = true;
-                TopHighlight.IsVisible = true;
-                ContentPanel.Opacity = 1.0;
-                Win32Helper.SetWindowTransparent(hwnd, false);
-            });
-            _hoverTimer.Stop();
+                Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    Background = Avalonia.Media.Brushes.Transparent;
+                    AcrylicBackground.IsVisible = true;
+                    TopHighlight.IsVisible = true;
+                    ContentPanel.Opacity = 1.0;
+                    Win32Helper.SetWindowTransparent(hwnd, false);
+                });
+                _hoverLeaveCount = 0;
+                _hoverTimer.Stop();
+            }
         }
         else
         {
+            // 鼠标仍在窗口附近（或回到窗口内），重置离开计数
+            _hoverLeaveCount = 0;
             Win32Helper.ReassertWindowTransparent(hwnd);
         }
     }
