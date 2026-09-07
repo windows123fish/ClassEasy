@@ -19,9 +19,32 @@ public partial class LessonCardViewModel : ObservableObject
     [ObservableProperty] private bool _isBreaking;
     [ObservableProperty] private double _progressPercent;
 
+    /// <summary>关联的 Lesson 引用，用于增量刷新时定位</summary>
+    public Models.Lesson? Source { get; set; }
+
     /// <summary>卡片透明度（根据状态）</summary>
     public double CardOpacity => IsCurrent ? 1.0 : IsEnded ? 0.35 : IsBreaking ? 0.5 : 0.75;
 
     /// <summary>进度条宽度（绑定到 Border.Width）</summary>
     public double ProgressWidth => 40 * (ProgressPercent / 100.0);
+
+    /// <summary>
+    /// 增量刷新：仅更新当前课的进度/剩余时间，其他字段未变化时不触发 PropertyChanged。
+    /// </summary>
+    public void RefreshTick(DateTime now)
+    {
+        if (Source is null || !IsCurrent) return;
+        var total = (Source.End - Source.Start).TotalSeconds;
+        if (total <= 0) return;
+
+        var elapsed = (now.TimeOfDay - Source.Start).TotalSeconds;
+        var pct = Math.Clamp(elapsed / total * 100, 0, 100);
+        if (Math.Abs(ProgressPercent - pct) >= 0.5)
+            ProgressPercent = pct;
+
+        var remain = Source.End - now.TimeOfDay;
+        var newTime = remain < TimeSpan.Zero ? TimeSpan.Zero : remain;
+        var formatted = $"剩余 {(int)newTime.TotalMinutes:00}:{newTime.Seconds:00}";
+        if (TimeInfo != formatted) TimeInfo = formatted;
+    }
 }

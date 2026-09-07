@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Timers;
 using Avalonia;
 using Avalonia.Controls;
@@ -20,6 +19,7 @@ public partial class MainWindow : Window
     private PixelPoint _windowStartPos;
     private bool _isTouchDragging;
     private bool _longPressTriggered;
+    private bool _userMovedWindow; // 用户是否手动拖拽过窗口
     private const int DragThreshold = 10; // 拖拽判定阈值（像素）
     private const int LongPressMs = 500;  // 长按判定时间（毫秒）
 
@@ -43,12 +43,15 @@ public partial class MainWindow : Window
 
         ShowInTaskbar = false;
 
-        // 屏幕正上方顶端
-        var screen = Screens.ScreenFromWindow(this) ?? Screens.Primary;
-        if (screen is not null)
+        // 屏幕正上方顶端（仅在用户未手动移动过窗口时才贴齐顶端）
+        if (!_userMovedWindow)
         {
-            var pos = Position;
-            Position = new PixelPoint(pos.X, screen.WorkingArea.Y);
+            var screen = Screens.ScreenFromWindow(this) ?? Screens.Primary;
+            if (screen is not null)
+            {
+                var pos = Position;
+                Position = new PixelPoint(pos.X, screen.WorkingArea.Y);
+            }
         }
 
         Win32Helper.HideFromAltTab(TryGetPlatformHandle()?.Handle ?? IntPtr.Zero);
@@ -73,6 +76,11 @@ public partial class MainWindow : Window
         _hoverTimer?.Dispose();
         _longPressTimer?.Stop();
         _longPressTimer?.Dispose();
+
+        // 主动释放 VM（避免依赖 OnClosed 时的隐式释放顺序）
+        if (DataContext is MainWindowViewModel vm)
+            vm.Dispose();
+
         Close();
     }
 
@@ -128,7 +136,7 @@ public partial class MainWindow : Window
         else
         {
             // 鼠标仍在窗口内：重新应用穿透样式，对抗 Avalonia 渲染循环对 GWL_EXSTYLE 的重置
-            Win32Helper.SetWindowTransparent(hwnd, true);
+            Win32Helper.ReassertWindowTransparent(hwnd);
         }
     }
 
@@ -147,6 +155,7 @@ public partial class MainWindow : Window
         _isTouchDragging = false;
         _longPressTriggered = false;
 
+        // 显式 Stop+Start，避免前一次未正常结束导致 Timer 处于 Stopped 后被忽略
         _longPressTimer.Stop();
         _longPressTimer.Start();
     }
@@ -174,6 +183,7 @@ public partial class MainWindow : Window
             Position = new PixelPoint(
                 _windowStartPos.X + (int)deltaX,
                 _windowStartPos.Y + (int)deltaY);
+            _userMovedWindow = true; // 标记用户已移动过，OnOpened 不再强制贴齐顶端
         }
     }
 
@@ -186,12 +196,19 @@ public partial class MainWindow : Window
             return;
 
         _longPressTimer.Stop();
+        _isTouchDragging = false;
+        _longPressTriggered = false;
+    }
 
-        if (!_isTouchDragging && !_longPressTriggered)
-        {
-            // 轻触：暂不做额外操作（避免与可能的后台点击冲突）
-        }
+    /// <summary>
+    /// 触摸捕获丢失（如窗口外滑出）：同样清理状态，避免残留触发菜单。
+    /// </summary>
+    private void RootBorder_PointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    {
+        if (e.Pointer.Type != PointerType.Touch)
+            return;
 
+        _longPressTimer.Stop();
         _isTouchDragging = false;
         _longPressTriggered = false;
     }
@@ -235,19 +252,8 @@ public partial class MainWindow : Window
         var exitItem = new MenuItem { Header = "退出" };
         exitItem.Click += (_, _) =>
         {
-            try
-            {
-                var icons = TrayIcon.GetIcons(Application.Current!);
-                if (icons is not null)
-                {
-                    var list = new List<TrayIcon>();
-                    foreach (var icon in icons)
-                        list.Add(icon);
-                    foreach (var icon in list)
-                        icons.Remove(icon);
-                }
-            }
-            catch { }
+            // 退出由 ApplicationLifetime.Shutdown() 统一处理，
+            // TrayIcon 清理与窗口释放下沉到 App.OnExit/OnFrameworkShutdownCompleted
             ForceClose();
             (Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Shutdown();
         };

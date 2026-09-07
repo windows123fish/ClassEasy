@@ -1,8 +1,8 @@
 using System;
-using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
+using Avalonia.Data;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using ClassEasy.Models;
@@ -18,8 +18,21 @@ public partial class WeekCalendarView : Window
         LoadWeek();
     }
 
+    private void InitializeComponent()
+        => AvaloniaXamlLoader.Load(this);
+
     private void LoadWeek()
     {
+        // 共享同一份 DataTemplate（避免每个 ItemsControl 都 new 一个 FuncDataTemplate）
+        var template = BuildLessonTemplate();
+        MonItems.ItemTemplate = template;
+        TueItems.ItemTemplate = template;
+        WedItems.ItemTemplate = template;
+        ThuItems.ItemTemplate = template;
+        FriItems.ItemTemplate = template;
+        SatItems.ItemTemplate = template;
+        SunItems.ItemTemplate = template;
+
         BindDay(MonItems, DayOfWeek.Monday);
         BindDay(TueItems, DayOfWeek.Tuesday);
         BindDay(WedItems, DayOfWeek.Wednesday);
@@ -33,9 +46,14 @@ public partial class WeekCalendarView : Window
     {
         int weekday = ((int)day + 6) % 7; // Monday=0, Sunday=6
         var lessons = ScheduleService.Instance.GetLessonsByWeekday(weekday);
-
         control.ItemsSource = lessons;
-        control.ItemTemplate = new FuncDataTemplate<Lesson>((lesson, _) =>
+    }
+
+    private static IDataTemplate BuildLessonTemplate()
+    {
+        // FuncDataTemplate 会为每个 Lesson 实例化一份 Border，由 Avalonia 负责回收，
+        // 避免之前手写 new Border/StackPanel 导致的内存常驻。
+        return new FuncDataTemplate<Lesson>((lesson, _) =>
         {
             var border = new Border
             {
@@ -50,26 +68,23 @@ public partial class WeekCalendarView : Window
             var stack = new StackPanel { Spacing = 2 };
             stack.Children.Add(new TextBlock
             {
-                Text = lesson.Subject.Name,
+                [!TextBlock.TextProperty] = new Binding("Subject.Name"),
                 FontWeight = FontWeight.SemiBold,
                 Foreground = Brushes.White,
                 FontSize = 13
             });
             stack.Children.Add(new TextBlock
             {
-                Text = lesson.TimeRange,
+                [!TextBlock.TextProperty] = new Binding("TimeRange"),
                 Foreground = new SolidColorBrush(Color.Parse("#AAAAAA")),
                 FontSize = 11
             });
-            if (!string.IsNullOrEmpty(lesson.Subject.TeacherName))
+            stack.Children.Add(new TextBlock
             {
-                stack.Children.Add(new TextBlock
-                {
-                    Text = lesson.Subject.TeacherName,
-                    Foreground = new SolidColorBrush(Color.Parse("#888888")),
-                    FontSize = 11
-                });
-            }
+                [!TextBlock.TextProperty] = new Binding("Subject.TeacherName"),
+                Foreground = new SolidColorBrush(Color.Parse("#888888")),
+                FontSize = 11
+            });
 
             border.Child = stack;
             return border;

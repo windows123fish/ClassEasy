@@ -30,9 +30,30 @@ public partial class App : Application
             _desktop = desktop;
             _mainWindow = new MainWindow();
             desktop.MainWindow = _mainWindow;
+
+            // 进程退出时显式释放托盘图标，避免 Windows shell 残留 ghost 托盘图标
+            desktop.Exit += OnDesktopExit;
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private void OnDesktopExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
+    {
+        DisposeTrayIcon();
+    }
+
+    private void DisposeTrayIcon()
+    {
+        if (_trayIcon is null) return;
+        try
+        {
+            var icons = TrayIcon.GetIcons(this);
+            if (icons is not null) icons.Remove(_trayIcon);
+            _trayIcon.Dispose();
+        }
+        catch { /* 进程退出阶段静默 */ }
+        _trayIcon = null;
     }
 
     /// <summary>

@@ -35,7 +35,10 @@ public static class XlsxReader
             // 1. sharedStrings（可选）
             var sharedStrings = ReadSharedStrings(archive);
 
-            // 2. 找到第一个 sheet 的文件路径
+            // 2. 样式（用于识别时间单元格）
+            var sharedStyles = ReadSharedStyles(archive);
+
+            // 3. 找到第一个 sheet 的文件路径
             var sheetPath = GetFirstSheetPath(archive);
             if (sheetPath is null)
             {
@@ -53,7 +56,7 @@ public static class XlsxReader
             using var sheetStream = sheetEntry.Open();
             var sheetDoc = XDocument.Load(sheetStream);
 
-            // 3. 收集所有行，确定最大行/列
+            // 4. 收集所有行，确定最大行/列
             var rows = sheetDoc.Root!.Elements(Ns + "sheetData").Elements(Ns + "row").ToList();
             if (rows.Count == 0)
             {
@@ -73,7 +76,7 @@ public static class XlsxReader
                 }
             }
 
-            // 4. 填充二维数组
+            // 5. 填充二维数组
             var grid = new string[maxRow, maxCol + 1];
             foreach (var row in rows)
             {
@@ -83,7 +86,7 @@ public static class XlsxReader
                     var refStr = c.Attribute("r")?.Value;
                     if (refStr is null) continue;
                     var (_, colIdx) = ParseCellRef(refStr);
-                    grid[r, colIdx] = GetCellText(c, sharedStrings);
+                    grid[r, colIdx] = GetCellText(c, sharedStrings, sharedStyles);
                 }
             }
 
@@ -107,6 +110,44 @@ public static class XlsxReader
             .Elements(Ns + "si")
             .Select(si => string.Concat(si.Descendants(Ns + "t").Select(t => t.Value)))
             .ToList();
+    }
+
+    /// <summary>
+    /// 读取 styles.xml，提取 numFmtId 列表（cellXfs/xf/numFmtId），
+    /// 用于判断某个单元格是否应用了时间格式。
+    /// </summary>
+    private static int[]? ReadSharedStyles(ZipArchive archive)
+    {
+        var entry = archive.GetEntry("xl/styles.xml");
+        if (entry is null) return null;
+
+        using var stream = entry.Open();
+        var doc = XDocument.Load(stream);
+        return doc.Root?
+            .Element(Ns + "cellXfs")?
+            .Elements(Ns + "xf")
+            .Select(xf =>
+            {
+                var raw = xf.Attribute("numFmtId")?.Value;
+                return int.TryParse(raw, out var n) ? n : 0;
+            })
+            .ToArray();
+    }
+
+    /// <summary>
+    /// 内置 numFmtId 集合：14/15/16/17/22/45/46/47 是 Excel 内置的时间格式。
+    /// 自定义格式（numFmtId >= 164）若 formatCode 含 'h' 或 's' 也视为时间。
+    /// </summary>
+    private static readonly HashSet<int> BuiltinTimeFormatIds = new() { 14, 15, 16, 17, 22, 45, 46, 47 };
+
+    private static bool IsTimeFormatStyle(string styleIdxStr, int[]? sharedStyles)
+    {
+        if (sharedStyles is null) return false;
+        if (!int.TryParse(styleIdxStr, out var idx) || idx < 0 || idx >= sharedStyles.Length)
+            return false;
+        var fmtId = sharedStyles[idx];
+        if (BuiltinTimeFormatIds.Contains(fmtId)) return true;
+        return false; // 自定义格式不在此实现范围，避免误判
     }
 
     private static string? GetFirstSheetPath(ZipArchive archive)
@@ -137,7 +178,7 @@ public static class XlsxReader
         return "xl/" + target;
     }
 
-    private static string GetCellText(XElement c, List<string>? sharedStrings)
+    private static string GetCellText(XElement c, List<string>? sharedStrings, int[]? sharedStyles)
     {
         var t = c.Attribute("t")?.Value;
         var v = c.Element(Ns + "v")?.Value;
@@ -156,9 +197,12 @@ public static class XlsxReader
                 return v == "1" ? "TRUE" : "FALSE";
             default: // numeric
                 if (v is null) return string.Empty;
-                // Excel 时间以 [0,1) 的序列号存储；若在范围内按时间格式化为 HH:mm
-                if (double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out var num)
-                    && num >= 0 && num < 1 && num != 0)
+                // 仅当单元格显式标记为时间格式（numFmtId ∈ 内置时间格式集）时才把序列号转成 HH:mm，
+                // 否则保持数字原文，避免把 0.3333（分数）误识别为 08:00。
+                if (c.Attribute("s")?.Value is { } styleIdx
+                    && IsTimeFormatStyle(styleIdx, sharedStyles)
+                    && double.TryParse(v, NumberStyles.Float, CultureInfo.InvariantCulture, out var num)
+                    && num >= 0 && num < 1)
                 {
                     // 转秒后四舍五入，避免浮点误差（如 8:00 显示成 07:59）
                     var ts = TimeSpan.FromSeconds(Math.Round(num * 86400));

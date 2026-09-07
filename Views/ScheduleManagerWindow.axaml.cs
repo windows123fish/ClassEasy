@@ -23,13 +23,22 @@ public partial class ScheduleManagerWindow : Window
         var plans = ScheduleService.Instance.Profile.ClassPlans
             .Select(kvp => new PlanItem { Id = kvp.Key, Name = kvp.Value.Name })
             .ToList();
+
+        // 先清空 SelectedItem，避免后续 SelectedIndex 触发 PlanBox_SelectionChanged 二次回调
+        PlanBox.SelectedItem = null;
         PlanBox.ItemsSource = plans;
         PlanBox.DisplayMemberBinding = new Avalonia.Data.Binding("Name");
+
         if (plans.Count > 0)
         {
             PlanBox.SelectedIndex = 0;
             _currentPlanId = plans[0].Id;
             LoadPlanData();
+        }
+        else
+        {
+            _currentPlanId = Guid.Empty;
+            CourseGrid.ItemsSource = null;
         }
     }
 
@@ -190,13 +199,29 @@ public partial class ScheduleManagerWindow : Window
 
     private void SaveBtn_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (_currentPlanId != Guid.Empty &&
-            ScheduleService.Instance.Profile.ClassPlans.TryGetValue(_currentPlanId, out var plan))
+        if (_currentPlanId == Guid.Empty ||
+            !ScheduleService.Instance.Profile.ClassPlans.TryGetValue(_currentPlanId, out var plan))
         {
-            ScheduleService.Instance.UpdateClassPlan(plan);
-            FormTip.Text = "课表已保存";
-            FormTip.Foreground = Avalonia.Media.Brushes.LightGreen;
+            FormTip.Text = "请先选择课表";
+            FormTip.Foreground = Avalonia.Media.Brushes.OrangeRed;
+            return;
         }
+
+        // 真实保存：把 SubjectBox 中选中的科目写入当前选中 ClassRow 对应的 ClassInfo.SubjectId
+        if (CourseGrid.SelectedItem is ClassRow row && SubjectBox.SelectedItem is SubjectItem subject)
+        {
+            if (row.Index >= 0 && row.Index < plan.Classes.Count)
+            {
+                plan.Classes[row.Index].SubjectId = subject.Id;
+                plan.Classes[row.Index].IsEmpty = false;
+                plan.Classes[row.Index].IsEnabled = true;
+            }
+        }
+
+        ScheduleService.Instance.UpdateClassPlan(plan);
+        LoadPlanData();
+        FormTip.Text = "课表已保存";
+        FormTip.Foreground = Avalonia.Media.Brushes.LightGreen;
     }
 
     private void NewPlanBtn_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
@@ -266,9 +291,11 @@ public partial class ScheduleManagerWindow : Window
             return;
         }
 
-        // TODO: 将 Excel 导入的课程映射到新模型
-        FormTip.Text = "Excel 导入功能待适配新数据模型，当前版本暂不支持";
-        FormTip.Foreground = Avalonia.Media.Brushes.OrangeRed;
+        // 提交到 ScheduleService（Changed 事件会通知主窗口自动刷新课程流）
+        ScheduleService.Instance.ImportFromLessons(lessons);
+        LoadPlans();
+        FormTip.Text = msg;
+        FormTip.Foreground = Avalonia.Media.Brushes.LightGreen;
     }
 
     private void CloseBtn_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

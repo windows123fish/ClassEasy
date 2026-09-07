@@ -37,7 +37,7 @@ public partial class MainWindowViewModel : ObservableObject
     public MainWindowViewModel()
     {
         UpdateTime();
-        UpdateLessonFlow(DateTime.Now);
+        UpdateLessonFlow(DateTime.Now, fullRebuild: true);
 
         ScheduleService.Instance.Changed += OnScheduleChanged;
 
@@ -47,14 +47,22 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     private void OnScheduleChanged()
-        => Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            UpdateSchedule(DateTime.Now);
-            UpdateLessonFlow(DateTime.Now);
-        });
+        => Dispatcher.UIThread.InvokeAsync(NotifyCurrentLessonChanged);
 
     public void Dispose()
     {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    private bool _disposed;
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed) return;
+        _disposed = true;
+        if (!disposing) return;
+
         ScheduleService.Instance.Changed -= OnScheduleChanged;
         _timer?.Stop();
         _timer?.Dispose();
@@ -66,7 +74,8 @@ public partial class MainWindowViewModel : ObservableObject
         {
             UpdateTime();
             UpdateSchedule(DateTime.Now);
-            UpdateLessonFlow(DateTime.Now);
+            // 每秒只做增量刷新（只动当前课卡片的进度/剩余时间），避免整列 ObservableCollection 重建闪烁
+            TickLessonFlow();
         });
     }
 
@@ -78,29 +87,77 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>
-    /// 更新课程流：参考 ClassIsland 主界面课程流设计。
+    /// 重建整个课程流（课表结构改变时才调用）。参考 ClassIsland 主界面设计。
     /// - 当前课程：显示完整名称 + 颜色条 + 进度 + 时间
     /// - 已结束：只显示首字母，淡化
     /// - 未开始：只显示首字母，正常亮度
     /// - 课间：显示"休"
     /// </summary>
-    private void UpdateLessonFlow(DateTime now)
+    private void RebuildLessonFlow()
+        => UpdateLessonFlow(DateTime.Now, fullRebuild: true);
+
+    /// <summary>
+    /// 增量刷新：仅对当前课卡片调用 RefreshTick，不重建 ObservableCollection。
+    /// </summary>
+    private void TickLessonFlow()
+    {
+        // 节次跨越（例如刚刚跨过下课时间）时需要重建整列以更新 IsCurrent/IsEnded
+        UpdateLessonFlow(DateTime.Now, fullRebuild: false);
+    }
+
+    /// <summary>
+    /// 检查当前课是否变化（跨节时调用），用于让 LessonCardViewModel 在跨节时即时失效
+    /// 而不必等下次整列重建。
+    /// </summary>
+    public void NotifyCurrentLessonChanged()
+    {
+        // ScheduleService.Changed 触发时上层调用，确保卡片状态立即刷新
+        UpdateSchedule(DateTime.Now);
+        RebuildLessonFlow();
+    }
+
+    /// <summary>
+    /// 更新课程流主逻辑。
+    /// fullRebuild=false 时尽量复用 LessonFlow 中的卡片；仅在边界跨越时才整列重建。
+    /// </summary>
+    private void UpdateLessonFlow(DateTime now, bool fullRebuild)
     {
         var lessons = ScheduleService.Instance.GetTodayLessons(now);
-        var flow = new ObservableCollection<LessonCardViewModel>();
 
         if (lessons.Count == 0)
         {
-            HasLessonsToday = false;
-            ShowDivider = false;
-            LessonFlow = flow;
+            if (HasLessonsToday || fullRebuild)
+            {
+                HasLessonsToday = false;
+                ShowDivider = false;
+                LessonFlow = new ObservableCollection<LessonCardViewModel>();
+            }
+            return;
+        }
+
+        var currentTime = now.TimeOfDay;
+        // 判断"当前课是否跨节"（最便宜的重建判据：上一秒的当前课 index != 当前 index）
+        int currentIndex = -1;
+        for (int i = 0; i < lessons.Count; i++)
+            if (currentTime >= lessons[i].Start && currentTime <= lessons[i].End)
+            { currentIndex = i; break; }
+
+        int prevCurrentIndex = -1;
+        if (LessonFlow is not null)
+            for (int i = 0; i < LessonFlow.Count; i++)
+                if (LessonFlow[i].IsCurrent) { prevCurrentIndex = i; break; }
+
+        if (!fullRebuild && currentIndex == prevCurrentIndex && LessonFlow.Count > 0)
+        {
+            // 仅增量：刷新当前卡片的进度/时间
+            foreach (var card in LessonFlow) card.RefreshTick(now);
             return;
         }
 
         HasLessonsToday = true;
         ShowDivider = true;
 
-        var currentTime = now.TimeOfDay;
+        var flow = new ObservableCollection<LessonCardViewModel>();
         TimeLayoutItem? prevItem = null;
 
         for (int i = 0; i < lessons.Count; i++)
@@ -130,6 +187,7 @@ public partial class MainWindowViewModel : ObservableObject
 
             var vm = new LessonCardViewModel
             {
+                Source = lesson,
                 SubjectName = lesson.Subject.Name,
                 SubjectInitial = !string.IsNullOrEmpty(lesson.Subject.Initial)
                     ? lesson.Subject.Initial
@@ -201,8 +259,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         ScheduleService.Instance.ImportFromLessons(lessons);
         _manualStatus = false;
-        UpdateSchedule(DateTime.Now);
-        UpdateLessonFlow(DateTime.Now);
+        NotifyCurrentLessonChanged();
         return msg;
     }
 

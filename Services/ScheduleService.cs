@@ -19,6 +19,7 @@ public class ScheduleService
 
     private readonly string _filePath;
     private Profile _profile = new();
+    private bool _suspendChanged; // 批量操作期间抑制 Changed 事件，最后统一触发一次
 
     public Profile Profile
     {
@@ -26,18 +27,36 @@ public class ScheduleService
         private set
         {
             _profile = value;
-            Changed?.Invoke();
+            if (!_suspendChanged) Changed?.Invoke();
         }
     }
 
     /// <summary>课表数据发生变更时触发</summary>
     public event Action? Changed;
 
+    /// <summary>最后一次 IO 错误信息（Save/Load 失败时记录），null 表示正常</summary>
+    public string? LastError { get; private set; }
+
     private ScheduleService()
     {
         _filePath = ResolvePath();
         Load();
         EnsureDefaults();
+    }
+
+    /// <summary>在 using 块内抑制 Changed 事件，块结束时仅触发一次</summary>
+    private IDisposable SuspendChangeNotifications()
+        => new ChangeScope(this);
+
+    private sealed class ChangeScope : IDisposable
+    {
+        private readonly ScheduleService _svc;
+        public ChangeScope(ScheduleService svc) { _svc = svc; _svc._suspendChanged = true; }
+        public void Dispose()
+        {
+            _svc._suspendChanged = false;
+            _svc.Changed?.Invoke();
+        }
     }
 
     // ---------- 查询 ----------
@@ -181,6 +200,7 @@ public class ScheduleService
     {
         if (lessons.Count == 0) return;
 
+        using var scope = SuspendChangeNotifications();
         // 1. 按课程名去重创建 Subject
         var subjectByName = new Dictionary<string, Subject>(StringComparer.Ordinal);
         foreach (var l in lessons)
@@ -246,7 +266,7 @@ public class ScheduleService
             Profile.ActiveClassPlanId = Profile.ClassPlans.First().Key;
 
         Save();
-        Changed?.Invoke();
+        // Changed 在 ChangeScope.Dispose() 时统一触发一次
     }
 
     private static string WeekDayToLabel(int wd) => wd switch
@@ -269,8 +289,13 @@ public class ScheduleService
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
             var json = JsonSerializer.Serialize(Profile, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(_filePath, json);
+            LastError = null;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            // 写入失败不能静默，否则用户永远不知道修改丢失
+            LastError = $"保存课表失败：{ex.Message}";
+        }
     }
 
     private void Load()
@@ -282,30 +307,59 @@ public class ScheduleService
             var profile = JsonSerializer.Deserialize<Profile>(json);
             if (profile != null)
                 Profile = profile;
+            LastError = null;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            // 损坏的 profile.json 不应让进程崩溃，回退到默认数据并提示
+            LastError = $"读取课表失败（已回退到默认）：{ex.Message}";
+        }
     }
 
     private void EnsureDefaults()
     {
-        // 确保至少有一个时间表和一个课表
+        // 1. 没有时间表时初始化一份标准时间表
         if (Profile.TimeLayouts.Count == 0)
-        {
-            var layout = new TimeLayout { Name = "标准时间表" };
-            layout.Items.Add(new TimeLayoutItem { StartTime = new TimeSpan(8, 0, 0), EndTime = new TimeSpan(8, 45, 0), TimeType = 0 });
-            layout.Items.Add(new TimeLayoutItem { StartTime = new TimeSpan(8, 55, 0), EndTime = new TimeSpan(9, 40, 0), TimeType = 0 });
-            layout.Items.Add(new TimeLayoutItem { StartTime = new TimeSpan(10, 0, 0), EndTime = new TimeSpan(10, 45, 0), TimeType = 0 });
-            layout.Items.Add(new TimeLayoutItem { StartTime = new TimeSpan(14, 0, 0), EndTime = new TimeSpan(14, 45, 0), TimeType = 0 });
-            layout.Items.Add(new TimeLayoutItem { StartTime = new TimeSpan(14, 55, 0), EndTime = new TimeSpan(15, 40, 0), TimeType = 0 });
-            var layoutId = Guid.NewGuid();
-            Profile.TimeLayouts[layoutId] = layout;
+            SeedDefaultTimeLayout();
 
-            var plan = new ClassPlan { Name = "默认课表", TimeLayoutId = layoutId, WeekDay = 0 };
-            for (int i = 0; i < layout.Items.Count; i++)
-                plan.Classes.Add(new ClassInfo { Index = i, IsEnabled = true });
-            Profile.ClassPlans[plan.Id] = plan;
-            Profile.ActiveClassPlanId = plan.Id;
+        // 2. 没有课表时初始化一份默认课表
+        if (Profile.ClassPlans.Count == 0)
+            SeedDefaultClassPlan();
+
+        // 3. 激活课表指向了已删除的对象 → 回退到第一个
+        if (Profile.ActiveClassPlanId.HasValue &&
+            !Profile.ClassPlans.ContainsKey(Profile.ActiveClassPlanId.Value))
+        {
+            Profile.ActiveClassPlanId = Profile.ClassPlans.Count > 0
+                ? Profile.ClassPlans.Keys.First()
+                : null;
         }
+    }
+
+    private void SeedDefaultTimeLayout()
+    {
+        var layout = new TimeLayout { Name = "标准时间表" };
+        layout.Items.Add(new TimeLayoutItem { StartTime = new TimeSpan(8, 0, 0), EndTime = new TimeSpan(8, 45, 0), TimeType = 0 });
+        layout.Items.Add(new TimeLayoutItem { StartTime = new TimeSpan(8, 55, 0), EndTime = new TimeSpan(9, 40, 0), TimeType = 0 });
+        layout.Items.Add(new TimeLayoutItem { StartTime = new TimeSpan(10, 0, 0), EndTime = new TimeSpan(10, 45, 0), TimeType = 0 });
+        layout.Items.Add(new TimeLayoutItem { StartTime = new TimeSpan(14, 0, 0), EndTime = new TimeSpan(14, 45, 0), TimeType = 0 });
+        layout.Items.Add(new TimeLayoutItem { StartTime = new TimeSpan(14, 55, 0), EndTime = new TimeSpan(15, 40, 0), TimeType = 0 });
+        Profile.TimeLayouts[Guid.NewGuid()] = layout;
+    }
+
+    private void SeedDefaultClassPlan()
+    {
+        // 用第一个可用的时间表；如果没有则先种一个
+        if (Profile.TimeLayouts.Count == 0) SeedDefaultTimeLayout();
+        var firstKv = Profile.TimeLayouts.First();
+        var layout = firstKv.Value;
+        var layoutId = firstKv.Key;
+
+        var plan = new ClassPlan { Name = "默认课表", TimeLayoutId = layoutId, WeekDay = 0 };
+        for (int i = 0; i < layout.Items.Count; i++)
+            plan.Classes.Add(new ClassInfo { Index = i, IsEnabled = true });
+        Profile.ClassPlans[plan.Id] = plan;
+        Profile.ActiveClassPlanId = plan.Id;
     }
 
     private static string ResolvePath()

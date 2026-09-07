@@ -93,8 +93,8 @@ public static class Win32Helper
 
     /// <summary>
     /// 设置窗口点击穿透：添加/移除 WS_EX_TRANSPARENT。
-    /// 注意：顶级窗口的 WS_EX_TRANSPARENT 必须配合 WS_EX_LAYERED 才能让命中测试穿透，
-    /// 因此开启穿透时同时设置 WS_EX_LAYERED 并用 SetLayeredWindowAttributes 保持窗口不透明。
+    /// 注意：顶级窗口的 WS_EX_TRANSPARENT 必须配合 WS_EX_LAYERED 才能让命中测试穿透。
+    /// 首次开启时同步设置 LAYERED + alpha=255；关闭时一并清除 LAYERED 以恢复软件渲染合成路径。
     /// </summary>
     public static void SetWindowTransparent(IntPtr hwnd, bool transparent)
     {
@@ -108,16 +108,38 @@ public static class Win32Helper
             SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
             // 保持窗口完全不透明（alpha=255），仅用 LAYERED 让 TRANSPARENT 生效
             SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
+            RefreshWindowStyle(hwnd);
         }
         else
         {
-            exStyle &= ~WS_EX_TRANSPARENT;
-            // 保留 WS_EX_LAYERED，避免反复开关造成闪烁；alpha=255 不影响视觉
+            exStyle &= ~(WS_EX_TRANSPARENT | WS_EX_LAYERED);
+            SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+            RefreshWindowStyle(hwnd);
+        }
+    }
+
+    /// <summary>
+    /// 定时器周期调用：仅在 EXSTYLE 已包含 TRANSPARENT 时再强制刷新样式缓存，
+    /// 避免每 100ms 反复走 LAYERED 合成路径造成的闪烁和 CPU 浪费。
+    /// </summary>
+    public static void ReassertWindowTransparent(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero)
+            return;
+
+        var exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+        // 仅在确实被外部重置时才补回，避免无谓的 SetWindowPos
+        if ((exStyle & WS_EX_TRANSPARENT) == 0)
+        {
+            exStyle |= WS_EX_TRANSPARENT | WS_EX_LAYERED;
             SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
             SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
         }
+        RefreshWindowStyle(hwnd);
+    }
 
-        // 强制系统刷新窗口命中测试缓存
+    private static void RefreshWindowStyle(IntPtr hwnd)
+    {
         SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0,
             0x0020 /* SWP_FRAMECHANGED */ | 0x0004 /* SWP_NOMOVE */ |
             0x0001 /* SWP_NOSIZE */ | 0x0002 /* SWP_NOZORDER */ |

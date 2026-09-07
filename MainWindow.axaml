@@ -22,7 +22,8 @@
             PointerEntered="RootBorder_PointerEntered"
             PointerPressed="RootBorder_PointerPressed"
             PointerMoved="RootBorder_PointerMoved"
-            PointerReleased="RootBorder_PointerReleased">
+            PointerReleased="RootBorder_PointerReleased"
+            PointerCaptureLost="RootBorder_PointerCaptureLost">
 
         <Border.Transitions>
             <Transitions>

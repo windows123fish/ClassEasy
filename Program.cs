@@ -10,7 +10,6 @@ class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        // 针对 8GB 内存的 Win7：采用持续低延迟 GC 模式，减少后台 GC 造成的卡顿
         GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
 
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
@@ -19,7 +18,10 @@ class Program
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
-            // Win7 老旧显卡驱动可能导致硬件加速崩溃，强制使用软件渲染
+            // Win7 老旧显卡驱动可能导致硬件加速崩溃，强制使用软件渲染。
+            // Avalonia 11.0.0 的 Win32PlatformOptions 仅暴露 RenderingMode；
+            // 这里把 Software 放在数组首项以确保渲染管线走软件路径，避免 Avalonia
+            // 在 Win7 上静默退化到 Direct2D/GPU 合成。
             .With(new Win32PlatformOptions
             {
                 RenderingMode = new[] { Win32RenderingMode.Software }

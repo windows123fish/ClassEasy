@@ -25,10 +25,11 @@ public class Lesson
 
     /// <summary>是否正在上</summary>
     public bool IsRunning(DateTime now)
-        => now.DayOfWeek == Day && now.TimeOfDay >= Start && now.TimeOfDay <= End;
-
-    /// <summary>星期（从 ClassPlan 的 WeekDay 转换）</summary>
-    public DayOfWeek Day => (DayOfWeek)((WeekDay + 1) % 7);
+    {
+        // WeekDay 是"周一=0"的索引，转换为 DayOfWeek 时 (WeekDay + 1) % 7 是兼容的映射
+        var expected = (DayOfWeek)((WeekDay + 1) % 7);
+        return now.DayOfWeek == expected && now.TimeOfDay >= Start && now.TimeOfDay <= End;
+    }
 
     /// <summary>课表中的星期（0=周一，6=周日）</summary>
     public int WeekDay { get; set; }
