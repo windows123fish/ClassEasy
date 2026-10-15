@@ -1,0 +1,12 @@
+bin/
+obj/
+publish/
+*.user
+*.suo
+.idea/
+.vs/
+.vscode/
+*.cipx
+build/
+packages/
+ClassIsland/
