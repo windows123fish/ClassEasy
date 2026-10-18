@@ -98,7 +98,8 @@ public class ModifyAppSettingsAction : ActionBase<ModifyAppSettingsActionSetting
 
     public static readonly JsonSerializerOptions FriendlyJsonSerializerOptions = new()
     {
-        AllowOutOfOrderMetadataProperties = true,
+        // net6 移植：AllowOutOfOrderMetadataProperties 为 STJ 9 API；运行时统一钉 STJ 8.0.5
+        // （见 ClassIsland.Core.csproj），此处移除。该选项仅用于标量/Color 值转换，不涉及 $id/$type 元数据属性。
         AllowTrailingCommas = true,
         Converters = { new JsonStringEnumConverter(), new ColorHexJsonConverter() },
         DefaultIgnoreCondition = JsonIgnoreCondition.Never,

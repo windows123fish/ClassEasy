@@ -1,0 +1,8 @@
+<Project>
+	<!-- net6 移植：System.Text.Json 全仓钉在 8.0.5（见 ClassIsland.Core.csproj 注释，规避 FluentAvalonia
+	     2.4.1 在 STJ 9 运行时下的 MissingMethodException），与 ReactiveUI 20.2.45 传递要求的 >= 9.0.2
+	     构成有意降级；restore 会在每个消费项目报 NU1605，此处统一豁免。 -->
+	<PropertyGroup>
+		<NoWarn>$(NoWarn);NU1605</NoWarn>
+	</PropertyGroup>
+</Project>

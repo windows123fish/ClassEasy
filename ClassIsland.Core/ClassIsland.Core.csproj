@@ -54,6 +54,11 @@
     <PackageReference Include="Octokit" Version="9.1.0" />
 
     <PackageReference Include="ReactiveUI" Version="20.2.45" />
+    <!-- net6 移植：FluentAvalonia 2.4.1 按 STJ 8.0 编译，STJ 9.0.2（ReactiveUI 拖入）删除了其调用的
+         JsonCollectionInfoValues.ObjectCreator setter，运行时 MissingMethodException。
+         直接引用强制统一到 8.0.5（含 net6.0 资产）；由此产生的 NU1605 包降级在
+         Directory.Build.props 中做仓库级豁免（PackageReference 上的 NoWarn 元数据对 restore 期无效）。 -->
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />

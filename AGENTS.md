@@ -4,12 +4,13 @@
 - Main solution: `ClassIsland.sln`; platform-filtered solutions: `ClassIsland.Filter.Linux.slnf`, `ClassIsland.Filter.MacOs.slnf`.
 - Runtime app entrypoint: `ClassIsland.Desktop/Program.cs`; Avalonia app/library: `ClassIsland/`; shared UI/services: `ClassIsland.Core/`.
 - Platform services: `platforms/ClassIsland.Platforms.{Windows,Linux,MacOs}`, wired by `CrossPlatformProps.props`.
-- `ClassIsland.Shared` and `ClassIsland.Shared.IPC` multi-target `net8.0;net472`; avoid APIs unavailable on `net472`.
-- `ClassIsland.Launcher` targets `net9.0`; most app projects target `net8.0`.
+- net6 移植：app 侧项目（ClassIsland / Core / Desktop / Shared / Shared.IPC / PluginSdk / Launcher / Platforms.Linux 等）统一目标 `net6.0`；`Platforms.Windows` 为 `net6.0-windows10.0.19041.0`。`Platforms.MacOs`、`DocsGenerator`、`_build`(NUKE) 保持 net8 系 TFM，且不在 `ClassIsland.sln` 中。
+- 兼容 `net472` 语义的 polyfill 见根目录 `CompilerPolyfills.cs`（由 `Global.props` 按 TFM 注入）。
 
 ## SDK And Restore
-- `global.json` requests .NET SDK `9.0.100` with `rollForward: latestFeature`; launcher/native-AOT work needs .NET 9 SDK, not just .NET 8.
-- Repo depends on `vendors/EdgeTtsSharp` (`classisland-v2` branch). If missing, run `git submodule update --init --recursive`.
+- net6 移植：`global.json` requests .NET SDK `10.0.100` with `rollForward: latestFeature`（用新 SDK 编译 net6 目标；运行需要本机安装 .NET 6 Desktop Runtime）。
+- 依赖钉版（均为 net6 运行时兼容性有意为之）：`System.Text.Json` 8.0.5（含 `Directory.Build.props` 的 NU1605 豁免）、`Downloader` 3.3.4、`Markdown.Avalonia` 11.0.3、`Microsoft.Win32.SystemEvents` 6.0.1、`System.Drawing.Common` 6.0.0，详见各 csproj 内注释。
+- `vendors/`（EdgeTtsSharp、SoundFlow、System.Device.Location、PhainonDistributionCenter.Shared）为普通源码目录直接入库，**不是子模块**，无需 `git submodule update`。
 - CI uses GitHub Package Registry: `https://nuget.pkg.github.com/ClassIsland/index.json`.
 
 ## Build Commands
