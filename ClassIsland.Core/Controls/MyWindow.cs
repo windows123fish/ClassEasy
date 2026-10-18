@@ -32,9 +32,6 @@ namespace ClassIsland.Core.Controls;
 [PseudoClasses(":no-easter-eggs")]
 public partial class MyWindow : AppWindow
 {
-    [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "get_PseudoClasses")]
-    private static extern IPseudoClasses GetPseudoClasses(StyledElement element);
-
     /// <summary>
     /// 是否显示开源警告水印
     /// </summary>
@@ -93,7 +90,8 @@ public partial class MyWindow : AppWindow
         var managementService = IAppHost.Host?.Services.GetService(typeof(IManagementService)) as IManagementService;
         if (managementService?.Policy.DisableEasterEggs == true)
         {
-            GetPseudoClasses(window).Add(":no-easter-eggs");
+            // net6 移植：UnsafeAccessor 不可用，改用公开的 Classes 集合（伪类存储于其中）
+            window.Classes.Add(":no-easter-eggs");
         }
         
         return;

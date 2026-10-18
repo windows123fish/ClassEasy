@@ -394,8 +394,10 @@ public class UpdateService : IHostedService, INotifyPropertyChanged
                 ChunkCount = 4,
                 ParallelCount = 4,
                 ParallelDownload = true,
-                BlockTimeout = 60_000,
-                HttpClientTimeout = 60_000
+                // net6 移植：Downloader 3.3.4 无 BlockTimeout/HttpClientTimeout，
+                // 块级超时用 Timeout，请求级超时用 RequestConfiguration.Timeout（默认 30s）
+                Timeout = 60_000,
+                RequestConfiguration = { Timeout = 60_000 }
             };
             // key 是 hash（HEX）
             Dictionary<string, (string Name, FileMapFile FileInfo)> filesHashed = [];
@@ -465,12 +467,12 @@ public class UpdateService : IHostedService, INotifyPropertyChanged
                 foreach (var (path, fileInfo) in component.Files)
                 {
                     if (prevFileMapUserVarsLoadSuccess && prevCompRoot != null &&
-                        Path.Exists(Path.Combine(prevCompRoot, path)) &&
+                        global::ClassIsland.Helpers.PathHelper.Exists(Path.Combine(prevCompRoot, path)) &&
                         component.AllowDiffUpdate &&
                         prevComp?.Files.GetValueOrDefault(path)?.FileSha512.SequenceEqual(fileInfo.FileSha512) == true)
                     {
                         await using var file = File.OpenRead(Path.Combine(prevCompRoot, path));
-                        var hash = await SHA512.HashDataAsync(file, cancellationToken);
+                        var hash = await global::ClassIsland.Helpers.HashHelper.Sha512HashDataAsync(file, cancellationToken);
                         if (hash.SequenceEqual(fileInfo.FileSha512))
                         {
                             existedFiles.Add(path);
@@ -518,7 +520,7 @@ public class UpdateService : IHostedService, INotifyPropertyChanged
                 Logger.LogInformation("开始下载 {}({})", fileName, file.ArchiveDownloadUrl);
                 var info = downloadTasksMap.GetValueOrDefault(hashHex) ?? DownloadTaskInfo.CreateEmpty();
                 info.State = DownloadState.Downloading;
-                await using var downloader = DownloadBuilder.New()
+                using var downloader = DownloadBuilder.New()
                     .WithConfiguration(options)
                     .WithUrl(file.ArchiveDownloadUrl)
                     .WithFileLocation(Path.Combine(dlRoot, hashHex[..2], hashHex))
@@ -710,7 +712,7 @@ public class UpdateService : IHostedService, INotifyPropertyChanged
 
                     await using (var file = File.OpenRead(fullPath))
                     {
-                        var hash = await SHA512.HashDataAsync(file);
+                        var hash = await global::ClassIsland.Helpers.HashHelper.Sha512HashDataAsync(file);
                         if (!hash.SequenceEqual(fileInfo.FileSha512))
                         {
                             throw new InvalidOperationException($"文件 {id}/{path} 的 SHA512 校验失败 ");
@@ -752,10 +754,10 @@ public class UpdateService : IHostedService, INotifyPropertyChanged
                     if (component.AllowDiffUpdate && existedFiles.Contains(path) && existedFilesRoot != null)
                     {
                         var existedPath = Path.Combine(existedFilesRoot, path);
-                        if (Path.Exists(existedPath))
+                        if (global::ClassIsland.Helpers.PathHelper.Exists(existedPath))
                         {
                             await using var file = File.OpenRead(existedPath);
-                            var hash = await SHA512.HashDataAsync(file);
+                            var hash = await global::ClassIsland.Helpers.HashHelper.Sha512HashDataAsync(file);
                             if (hash.SequenceEqual(fileInfo.FileSha512))
                             {
                                 Logger.LogTrace("Deploy Check EXISTED {} -> {}", existedPath, targetPath);
@@ -826,12 +828,16 @@ public class UpdateService : IHostedService, INotifyPropertyChanged
 
             if (OperatingSystem.IsLinux() && AppBase.Current.PackagingType == "folder")
             {
-                using var proc = Process.Start(new ProcessStartInfo("chmod",
-                [
-                    "+x",
-                    Path.GetFullPath(Path.Combine(root,
-                        "ClassIsland"))
-                ]));
+                // net6 移植：ProcessStartInfo(string, IEnumerable<string>) 是 .NET 8+，改用 ArgumentList
+                using var proc = Process.Start(new ProcessStartInfo("chmod")
+                {
+                    ArgumentList =
+                    {
+                        "+x",
+                        Path.GetFullPath(Path.Combine(root,
+                            "ClassIsland"))
+                    }
+                });
                 var task = proc?.WaitForExitAsync();
                 if (task != null)
                 {

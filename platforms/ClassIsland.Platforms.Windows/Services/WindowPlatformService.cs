@@ -26,7 +26,7 @@ public class WindowPlatformService : IWindowPlatformService, IDisposable
 
     private bool _isMoving = false;
 
-    public nint ForegroundWindowHandle { get; set; } = nint.Zero;
+    public nint ForegroundWindowHandle { get; set; } = IntPtr.Zero;
 
     public void Dispose()
     {
@@ -121,8 +121,8 @@ public class WindowPlatformService : IWindowPlatformService, IDisposable
     
     public void SetWindowFeature(TopLevel toplevel, WindowFeatures features, bool state)
     {
-        var handle = toplevel.TryGetPlatformHandle()?.Handle ?? nint.Zero;
-        if (handle == nint.Zero)
+        var handle = toplevel.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+        if (handle == IntPtr.Zero)
         {
             return;
         }

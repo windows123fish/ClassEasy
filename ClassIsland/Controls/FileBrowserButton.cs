@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -70,7 +70,8 @@ public class FileBrowserButton : Button
             var files = await PlatformServices.FilePickerService.OpenFilesPickerAsync(new FilePickerOpenOptions
             {
                 SuggestedStartLocation = await storageProvider.TryGetFolderFromPathAsync(StartFolder),
-                FileTypeFilter = FileTypes.AsReadOnly(),
+                // net6 移植：CollectionExtensions.AsReadOnly 是 .NET 7+，改用 ReadOnlyCollection
+                FileTypeFilter = new System.Collections.ObjectModel.ReadOnlyCollection<FilePickerFileType>(FileTypes),
                 AllowMultiple = false,
                 SuggestedFileName = CurrentPath
             }, TopLevel.GetTopLevel(this) ?? AppBase.Current.GetRootWindow());

@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -8,13 +7,13 @@ using Avalonia.Xaml.Interactivity;
 namespace ClassIsland.Core.Behaviors;
 
 /// <summary>
-/// 
+///
 /// </summary>
 public class ToggleTabStripBehavior : Behavior<TabStrip>
 {
-    [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "get_PseudoClasses")]
-    private static extern IPseudoClasses GetPseudoClasses(StyledElement element);
-    
+    // net6 移植：UnsafeAccessor 是 .NET 8+ 运行时特性，改用公开的 Classes 集合（实现 IPseudoClasses）。
+    private static IPseudoClasses GetPseudoClasses(StyledElement element) => element.Classes;
+
     protected override void OnAttached()
     {
         if (AssociatedObject != null)

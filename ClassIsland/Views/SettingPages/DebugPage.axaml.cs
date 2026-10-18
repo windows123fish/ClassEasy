@@ -152,7 +152,8 @@ public partial class DebugPage : SettingsPageBase
     private void MenuItemGcCollect_OnClick(object sender, RoutedEventArgs e)
     {
         var before = GC.GetTotalMemory(true);
-        GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, true);
+        // net6 移植：GCCollectionMode.Aggressive 在 net6 不可用，使用最接近的 Forced
+        GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true);
         var after = GC.GetTotalMemory(true);
         var delta = before - after;
         if (delta <= 0)
@@ -245,7 +246,7 @@ public partial class DebugPage : SettingsPageBase
         if (!ViewModel.IsTargetDateTimeLoaded) return;
 
         DateTime now = ExactTimeService.GetCurrentLocalDateTime();
-        DateTime tar = new(DateOnly.FromDateTime(now), TimeOnly.FromTimeSpan(e.NewTime ?? TimeSpan.Zero));
+        DateTime tar = DateOnly.FromDateTime(now).ToDateTime(TimeOnly.FromTimeSpan(e.NewTime ?? TimeSpan.Zero));
 
         ViewModel.SettingsService.Settings.DebugTimeOffsetSeconds += Math.Round((tar - now).TotalSeconds);
     }
@@ -255,7 +256,7 @@ public partial class DebugPage : SettingsPageBase
         if (!ViewModel.IsTargetDateTimeLoaded) return;
 
         DateTime now = ExactTimeService.GetCurrentLocalDateTime().Date;
-        DateTime tar = new(DateOnly.FromDateTime(ViewModel.TargetDate), TimeOnly.FromTimeSpan(now.TimeOfDay));
+        DateTime tar = DateOnly.FromDateTime(ViewModel.TargetDate).ToDateTime(TimeOnly.FromTimeSpan(now.TimeOfDay));
 
         ViewModel.SettingsService.Settings.DebugTimeOffsetSeconds += Math.Round((tar - now).TotalSeconds);
     }

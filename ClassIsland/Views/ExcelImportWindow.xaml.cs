@@ -451,8 +451,8 @@ public partial class ExcelImportWindow : MyWindow
         // 保存结果
         var result = new TimeLayoutItem()
         {
-            StartSecond = new DateTime(baseDateOnly, new TimeOnly(h1, m1, s1)),
-            EndSecond = new DateTime(baseDateOnly, new TimeOnly(h2, m2, s2))
+            StartSecond = baseDateOnly.ToDateTime(new TimeOnly(h1, m1, s1)),
+            EndSecond = baseDateOnly.ToDateTime(new TimeOnly(h2, m2, s2))
         };
         return result;
     }

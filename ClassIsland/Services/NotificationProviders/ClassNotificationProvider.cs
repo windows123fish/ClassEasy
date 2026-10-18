@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -149,7 +149,7 @@ public class ClassNotificationProvider : NotificationProviderBase<ClassNotificat
             })
             {
                 SpeechContent = $"{message} 下节课是：{LessonsService.NextClassSubject.Name}{(Settings.ShowTeacherName ? $"，{FormatTeacher(LessonsService.NextClassSubject)}" : "")}。",
-                EndTime = new DateTime(DateOnly.FromDateTime(ExactTimeService.GetCurrentLocalDateTime()), TimeOnly.FromTimeSpan(LessonsService.NextClassTimeLayoutItem.StartTime)),
+                EndTime = DateOnly.FromDateTime(ExactTimeService.GetCurrentLocalDateTime()).ToDateTime(TimeOnly.FromTimeSpan(LessonsService.NextClassTimeLayoutItem.StartTime)),
                 IsSpeechEnabled = Settings.IsSpeechEnabledOnClassPreparing
             },
             ChannelId = Guid.Parse(PrepareOnClassChannelId)

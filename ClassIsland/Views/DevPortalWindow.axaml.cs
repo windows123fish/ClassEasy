@@ -78,7 +78,7 @@ public partial class DevPortalWindow : MyWindow
         if (!ViewModel.IsTargetDateTimeLoaded) return;
 
         DateTime now = ViewModel.ExactTimeService.GetCurrentLocalDateTime();
-        DateTime tar = new(DateOnly.FromDateTime(now), TimeOnly.FromTimeSpan(e.NewTime ?? TimeSpan.Zero));
+        DateTime tar = DateOnly.FromDateTime(now).ToDateTime(TimeOnly.FromTimeSpan(e.NewTime ?? TimeSpan.Zero));
 
         ViewModel.SettingsService.Settings.DebugTimeOffsetSeconds += Math.Round((tar - now).TotalSeconds);
     }
@@ -88,7 +88,7 @@ public partial class DevPortalWindow : MyWindow
         if (!ViewModel.IsTargetDateTimeLoaded) return;
 
         DateTime now = ViewModel.ExactTimeService.GetCurrentLocalDateTime().Date;
-        DateTime tar = new(DateOnly.FromDateTime(ViewModel.TargetDate), TimeOnly.FromTimeSpan(now.TimeOfDay));
+        DateTime tar = DateOnly.FromDateTime(ViewModel.TargetDate).ToDateTime(TimeOnly.FromTimeSpan(now.TimeOfDay));
 
         ViewModel.SettingsService.Settings.DebugTimeOffsetSeconds += Math.Round((tar - now).TotalSeconds);
     }

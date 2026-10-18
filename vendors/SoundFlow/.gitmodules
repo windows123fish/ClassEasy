@@ -1,0 +1,6 @@
+[submodule "Native/Submodules/miniaudio"]
+	path = Native/Submodules/miniaudio
+	url = https://github.com/mackron/miniaudio.git
+[submodule "Extensions/SoundFlow.Extensions.WebRtc.Apm/Native"]
+	path = Extensions/SoundFlow.Extensions.WebRtc.Apm/Native
+	url = https://github.com/LSXPrime/webrtc-audio-processing

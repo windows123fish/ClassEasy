@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using ClassIsland.Core.Abstractions.Automation;
 using ClassIsland.Core.Abstractions.Services;
@@ -68,7 +68,7 @@ public class PreTimePointTrigger(ILessonsService lessonsService, IExactTimeServi
             }
 
             var targetTime = targetStartTime - TimeSpanHelper.FromSecondsSafe(Settings.TimeSeconds);
-            var targetTime2 = new DateTime(DateOnly.FromDateTime(now), TimeOnly.FromTimeSpan(targetTime));
+            var targetTime2 = DateOnly.FromDateTime(now).ToDateTime(TimeOnly.FromTimeSpan(targetTime));
             //Console.WriteLine($"{LastCheckTime} {targetTime} {targetTimePoint.StartSecond} {now}");
             if (LastCheckTime < targetTime2 && targetTime2 <= now)
             {

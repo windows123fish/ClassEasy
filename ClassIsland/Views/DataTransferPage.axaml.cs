@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Runtime.InteropServices.JavaScript;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
@@ -456,7 +455,7 @@ public partial class DataTransferPage : UserControl
         {
             ViewModel.PageIndex = 3;
             var path = ViewModel.ImportSourcePath;
-            var temp = Directory.CreateTempSubdirectory("ClassIslandDataExport").FullName;
+            var temp = global::ClassIsland.Helpers.PathHelper.CreateTempSubdirectory("ClassIslandDataExport").FullName;
             //await File.WriteAllTextAsync(Path.Combine(temp, "Logs.log"), logs);
             Directory.CreateDirectory(Path.Combine(temp, "Profiles/"));
             Directory.CreateDirectory(Path.Combine(temp, "Plugins/"));

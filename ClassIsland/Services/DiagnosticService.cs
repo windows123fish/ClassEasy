@@ -112,7 +112,7 @@ public class DiagnosticService(SettingsService settingsService, FileFolderServic
     {
         try
         {
-            var temp = Directory.CreateTempSubdirectory("ClassIslandDiagnosticExport").FullName;
+            var temp = global::ClassIsland.Helpers.PathHelper.CreateTempSubdirectory("ClassIslandDiagnosticExport").FullName;
             var logs = string.Join(Environment.NewLine, AppLogService.Logs);
             //await File.WriteAllTextAsync(Path.Combine(temp, "Logs.log"), logs);
             await File.WriteAllTextAsync(Path.Combine(temp, "DiagnosticInfo.txt"), GetDiagnosticInfo());

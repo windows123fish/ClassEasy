@@ -8,7 +8,16 @@
 		<NullabilityInfoContextSupport>True</NullabilityInfoContextSupport>
 		<ErrorOnDuplicatePublishOutputFiles>False</ErrorOnDuplicatePublishOutputFiles>
 		<CheckEolWorkloads>false</CheckEolWorkloads>
+		<!-- net6 移植：net6.0 默认 LangVersion 为 C# 10，代码使用 C# 12+ 语法，统一提升 -->
+		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
+
+	<!-- net6 移植：为 net6.0/net472 目标引入编译器特性 polyfill -->
+	<ItemGroup Condition="'$(TargetFramework)' == 'net472' Or $(TargetFramework.StartsWith('net6.0'))">
+		<Compile Include="$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)'))/CompilerPolyfills.cs">
+			<Link>Properties\CompilerPolyfills.cs</Link>
+		</Compile>
+	</ItemGroup>
 	
 	<ItemGroup>
 		<PackageReference Include="ClassIsland.SimpleGitInfoGenerator" PrivateAssets="All"

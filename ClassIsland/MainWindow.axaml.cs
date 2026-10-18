@@ -365,7 +365,7 @@ public partial class MainWindow : Window, ITopmostEffectPlayer
     private void InitializeRawInputHandler()
     {
         if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("RawInput仅在Windows平台受支持。");
-        var handle = TryGetPlatformHandle()?.Handle ?? nint.Zero;
+        var handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
         RawInputDevice.RegisterDevice(HidUsageAndPage.Mouse,
             RawInputDeviceFlags.InputSink, handle);
         RawInputDevice.RegisterDevice(HidUsageAndPage.TouchScreen,
@@ -670,7 +670,7 @@ public partial class MainWindow : Window, ITopmostEffectPlayer
     {
         if (!OperatingSystem.IsWindows())
         {
-            return nint.Zero;
+            return IntPtr.Zero;
         } 
         if (msg == 0x00FF) // WM_INPUT
         {
@@ -703,7 +703,7 @@ public partial class MainWindow : Window, ITopmostEffectPlayer
             }
         }
 
-        return nint.Zero;
+        return IntPtr.Zero;
     }
     #endregion
 
@@ -794,7 +794,7 @@ public partial class MainWindow : Window, ITopmostEffectPlayer
         {
             return;
         }
-        var handle = TryGetPlatformHandle()?.Handle ?? nint.Zero;
+        var handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
         if (ViewModel.IsNotificationWindowExplicitShowed || ViewModel.Settings.WindowLayer == 1)
         {
             PlatformServices.WindowPlatformService.SetWindowFeature(this, WindowFeatures.Topmost, true);

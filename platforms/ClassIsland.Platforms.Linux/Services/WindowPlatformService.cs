@@ -98,7 +98,7 @@ public class WindowPlatformService : IWindowPlatformService
                     0,
                     1,
                     false,
-                    nint.Zero,
+                    IntPtr.Zero,
                     out actualType,
                     out actualFormat,
                     out nitems,
@@ -127,15 +127,15 @@ public class WindowPlatformService : IWindowPlatformService
     
     public void SetWindowFeature(TopLevel toplevel, WindowFeatures features, bool state)
     {
-        var handle = toplevel.TryGetPlatformHandle()?.Handle ?? nint.Zero;
-        if (handle == nint.Zero)
+        var handle = toplevel.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+        if (handle == IntPtr.Zero)
         {
             return;
         }
         
         if ((features & WindowFeatures.Transparent) > 0)
         {
-            var region = state ? XFixesCreateRegion(_display, 0, 0) : nint.Zero;
+            var region = state ? XFixesCreateRegion(_display, IntPtr.Zero, 0) : IntPtr.Zero;
             XFixesSetWindowShapeRegion(_display, handle, ShapeInput, 0, 0, region);
             XFlush(_display);
         }
@@ -307,8 +307,8 @@ public class WindowPlatformService : IWindowPlatformService
 
     public void ClearWindow(TopLevel topLevel)
     {
-        var handle = topLevel.TryGetPlatformHandle()?.Handle ?? nint.Zero;
-        if (handle == nint.Zero)
+        var handle = topLevel.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+        if (handle == IntPtr.Zero)
         {
             return;
         }

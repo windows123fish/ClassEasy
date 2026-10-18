@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Avalonia.Data.Converters;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -28,6 +28,6 @@ public partial class TimeAdjustmentViewModel : ObservableObject
     public TimeSpan TargetTimeSpan
     {
         get => TargetTime.TimeOfDay;
-        set => TargetTime = new DateTime(DateOnly.FromDateTime(TargetTime.Date), TimeOnly.FromTimeSpan(value));
+        set => TargetTime = DateOnly.FromDateTime(TargetTime.Date).ToDateTime(TimeOnly.FromTimeSpan(value));
     }
 }

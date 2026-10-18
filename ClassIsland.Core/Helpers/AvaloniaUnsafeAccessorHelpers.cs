@@ -1,5 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
+using System.Reflection;
 using Avalonia;
 using Avalonia.Platform;
 using Avalonia.Rendering;
@@ -9,23 +8,29 @@ namespace ClassIsland.Core.Helpers;
 
 internal static class AvaloniaUnsafeAccessorHelpers
 {
-    [UnsafeAccessor(UnsafeAccessorKind.StaticMethod, Name = "get_Current")]
-    static extern IAvaloniaDependencyResolver? GetCurrentAvaloniaLocator(AvaloniaLocator? nullLocator);
+    // net6 移植：UnsafeAccessor 是 .NET 8+ 运行时特性，net6 上改为反射访问。
+    private static readonly PropertyInfo? CurrentProperty =
+        typeof(AvaloniaLocator).GetProperty("Current",
+            BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
 
-    [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "GetService")]
-    static extern object? GetAvaloniaDependencyService(IAvaloniaDependencyResolver? avaloniaLocator, Type serviceType);
+    private static IAvaloniaDependencyResolver? AvaloniaLocator { get; } =
+        CurrentProperty?.GetValue(null) as IAvaloniaDependencyResolver;
 
-    private static IAvaloniaDependencyResolver? AvaloniaLocator { get; }= GetCurrentAvaloniaLocator(null);
+    // GetService 声明于内部基接口，编译期不可直接访问，运行时通过反射调用。
+    private static readonly MethodInfo? GetServiceMethod =
+        typeof(IAvaloniaDependencyResolver).GetMethod("GetService",
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+            null, new[] { typeof(Type) }, null);
 
     internal static T? GetAvaloniaLocatorService<T>()
         where T : class
     {
-        if (AvaloniaLocator is null)
+        if (AvaloniaLocator is null || GetServiceMethod is null)
             return null;
-        object? result = GetAvaloniaDependencyService(AvaloniaLocator, typeof(T));
+        object? result = GetServiceMethod.Invoke(AvaloniaLocator, new object?[] { typeof(T) });
         return result as T;
     }
-    
+
     public static Win32CompositionMode? GetActiveWin32CompositionMode()
     {
         var renderTimer = GetAvaloniaLocatorService<IRenderTimer>();

@@ -1,4 +1,4 @@
-﻿using ClassIsland.Core.Exceptions;
+using ClassIsland.Core.Exceptions;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -50,10 +50,10 @@ public static class ChecksumHelper
     /// <returns>校验结果</returns>
     public static bool CheckChecksum(string filePath, string checksum)
     {
-        var stream = File.OpenRead(filePath);
-        var md5 = MD5.HashData(stream);
-        var md5Hex = Convert.ToHexString(md5);
-        stream.Close();
+        // net6 移植：MD5.HashData(Stream) 是 .NET 7+ API，改用 ComputeHash
+        using var stream = File.OpenRead(filePath);
+        using var md5 = MD5.Create();
+        var md5Hex = Convert.ToHexString(md5.ComputeHash(stream));
         return string.Compare(checksum, md5Hex, StringComparison.CurrentCultureIgnoreCase) == 0;
     }
 

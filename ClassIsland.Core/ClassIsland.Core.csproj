@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
@@ -42,7 +42,8 @@
   <ItemGroup>
     <PackageReference Include="AsyncImageLoader.Avalonia" Version="3.3.0" />
     <PackageReference Condition="'$(Configuration)'=='Debug'" Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.0-beta2" />
-    <PackageReference Include="ClassIsland.Markdown.Avalonia" Version="11.0.3.4" />
+    <!-- net6 移植：ClassIsland fork 的 Markdown.Avalonia 仅 net8.0，换用上游 whistyun 完整包（含 net6.0 资产与相同 Xmlns URI） -->
+    <PackageReference Include="Markdown.Avalonia" Version="11.0.3" />
     <PackageReference Include="Lib.Harmony.Thin" Version="2.4.2" />
     <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.183">
       <PrivateAssets>all</PrivateAssets>
@@ -60,7 +61,8 @@
     <PackageReference Include="Xaml.Behaviors" Version="11.3.9.5" />
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
 
-    <PackageReference Include="SoundFlow" Version="1.2.1.*" />
+    <!-- net6 移植：SoundFlow 官方包仅 net8.0 资产，改为 vendor 源码（vendors/SoundFlow, V1.2.1）以 net6.0 真实编译 -->
+    <ProjectReference Include="..\vendors\SoundFlow\Src\SoundFlow.csproj" />
     <PackageReference Include="Avalonia" Version="$(AvaloniaVersion)" />
     <PackageReference Include="Avalonia.Desktop" Version="$(AvaloniaVersion)" />
     <PackageReference Include="Avalonia.Controls.ColorPicker" Version="$(AvaloniaVersion)" />

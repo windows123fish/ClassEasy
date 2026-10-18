@@ -57,7 +57,7 @@ public partial class RefreshingPage : UserControl, IWelcomePage
                 if (scope.ProfileClassPlans)
                 {
                     foreach (var (key, _) in profile.ClassPlans.Where(x => !scope.ReservedClassPlans.Contains(x.Key))
-                                 .ToDictionary())
+                                 .ToDictionary(x => x.Key, x => x.Value))
                     {
                         profile.ClassPlans.Remove(key);
                     }
@@ -69,9 +69,9 @@ public partial class RefreshingPage : UserControl, IWelcomePage
                 if (scope.ProfileTimeLayouts)
                 {
                     foreach (var (key, _) in profile.TimeLayouts
-                                 .Where(x => !scope.ReservedTimeLayouts.Contains(x.Key) 
+                                 .Where(x => !scope.ReservedTimeLayouts.Contains(x.Key)
                                              && !requiredTimeLayouts.Contains(x.Key))
-                                 .ToDictionary())
+                                 .ToDictionary(x => x.Key, x => x.Value))
                     {
                         profile.TimeLayouts.Remove(key);
                     }

@@ -169,7 +169,12 @@ public partial class SlideComponent : ComponentBase<SlideComponentSettings>
             list[i] = i;
         }
         Random rand = new();
-        rand.Shuffle(list);
+        // net6 移植：Random.Shuffle 是 .NET 8+ API，使用 Fisher-Yates 洗牌
+        for (var i = list.Length - 1; i > 0; i--)
+        {
+            var j = rand.Next(i + 1);
+            (list[i], list[j]) = (list[j], list[i]);
+        }
         foreach (var i in list)
         {
             _randomPlaylist.Enqueue(i);

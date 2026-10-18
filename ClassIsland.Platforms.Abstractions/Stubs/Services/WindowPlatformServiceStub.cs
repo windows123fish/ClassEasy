@@ -81,7 +81,7 @@ public class WindowPlatformServiceStub : IWindowPlatformService
     }
 
     /// <inheritdoc />
-    public IntPtr ForegroundWindowHandle { get; } = nint.Zero;
+    public IntPtr ForegroundWindowHandle { get; } = IntPtr.Zero;
 
     /// <inheritdoc />
     public int GetWindowPid(IntPtr handle)

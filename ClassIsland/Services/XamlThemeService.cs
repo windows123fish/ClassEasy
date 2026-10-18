@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -410,7 +410,7 @@ public class XamlThemeService : ObservableRecipient, IXamlThemeService
             }
         }
 
-        foreach (var pkg in Directory.EnumerateDirectories(ThemesPath).Where(x => Path.Exists(Path.Combine(x, ".uninstall"))))
+        foreach (var pkg in Directory.EnumerateDirectories(ThemesPath).Where(x => global::ClassIsland.Helpers.PathHelper.Exists(Path.Combine(x, ".uninstall"))))
         {
             try
             {

@@ -139,8 +139,10 @@ public class PluginMarketService : ObservableRecipient, IPluginMarketService
                     .WithFileLocation(archive)
                     .WithConfiguration(new DownloadConfiguration()
                     {
-                        BlockTimeout = 10_000,
-                        HttpClientTimeout = 10_000
+                        // net6 移植：Downloader 3.3.4 无 BlockTimeout/HttpClientTimeout，
+                        // 块级超时用 Timeout，请求级超时用 RequestConfiguration.Timeout（默认 30s）
+                        Timeout = 10_000,
+                        RequestConfiguration = { Timeout = 10_000 }
                     })
                     .Build();
                 var i1 = i;
@@ -162,7 +164,7 @@ public class PluginMarketService : ObservableRecipient, IPluginMarketService
                     Directory.CreateDirectory(indexFolderPath);
                     ZipFile.ExtractToDirectory(archive, indexFolderPath);
                 };
-                await download.StartAsync();
+                await download.StartAsync(System.Threading.CancellationToken.None);
 
                 i++;
             }

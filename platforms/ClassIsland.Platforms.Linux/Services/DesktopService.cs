@@ -19,7 +19,7 @@ public class DesktopService : IDesktopService
             try
             {
                 var startupPath = StartupPath;
-                if (!Path.Exists(Path.GetDirectoryName(startupPath)))
+                if (!global::ClassIsland.Helpers.PathHelper.Exists(Path.GetDirectoryName(startupPath)))
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(startupPath) ?? "");
                 }

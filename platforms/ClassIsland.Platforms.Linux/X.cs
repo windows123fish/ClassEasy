@@ -107,8 +107,9 @@ public partial class X
         out nint prop
     );
     
-    [LibraryImport(X11)]
-    public static unsafe partial int XNextEvent(IntPtr display, out XEvent e);
+    // net6 移植：LibraryImport 是 .NET 7+ 源生成器，改回 DllImport
+    [DllImport(X11)]
+    public static extern int XNextEvent(IntPtr display, out XEvent e);
     
     [DllImport(X11)]
     public static extern int XInitThreads();
