@@ -44,10 +44,10 @@ using ClassIsland.ViewModels.SettingsPages;
 using ClassIsland.Views;
 using ClassIsland.Views.SettingPages;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
-using Microsoft.Extensions.Logging.EventLog;
 using Sentry;
 
 namespace ClassIsland;
@@ -209,7 +209,11 @@ public partial class App
             LogMaskingHelper.Rules.Add(new LogMaskRule(new(@"(latitude=)(\d*\.?\d*)"), 2));
             LogMaskingHelper.Rules.Add(new LogMaskRule(new(@"(longitude=)(\d*\.?\d*)"), 2));
 
-            builder.AddFilter<EventLogLoggerProvider>(level => level >= LogLevel.Error);
+            // net6 移植：以安全包装替代直接注册的 EventLogLoggerProvider。默认事件源 ".NET Runtime"
+            // 在普通用户权限下不可写，原生提供方会把写入异常抛进日志管线，诱发全局异常处理风暴
+            // （实测 UI 卡死）。保持原 Error+ 过滤等级，写入失败时静默降级，见 SafeEventLogLoggerProvider。
+            builder.Services.TryAddEnumerable(ServiceDescriptor
+                .Singleton<ILoggerProvider, Services.Logging.SafeEventLogLoggerProvider>());
             builder.AddConsoleFormatter<ClassIslandConsoleFormatter, ConsoleFormatterOptions>();
             builder.AddConsole(console => { console.FormatterName = "classisland"; });
             builder.AddSentry(o =>

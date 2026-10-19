@@ -365,6 +365,30 @@ public partial class App : AppBase, IAppHost
 
     internal async void ProcessUnhandledException(Exception e, bool critical=false)
     {
+        // 异常处理器自身绝不允许异常逃逸：本方法为 async void，await 之后抛出的异常会直接成为
+        // Dispatcher 未处理异常并再次触发本处理器，形成异常风暴（实测：EventLog 事件源写入被拒 +
+        // 崩溃窗口显示失败时无限循环，UI 卡死、CPU 打满、每秒约 68 条“发生严重错误”）。
+        // 任何二次失败一律降级为关键异常处理（Stop）。
+        try
+        {
+            await ProcessUnhandledExceptionCore(e, critical);
+        }
+        catch (Exception processingError)
+        {
+            try
+            {
+                Logger?.LogError(processingError, "处理严重错误时出现二次失败。");
+            }
+            catch
+            {
+                // 日志管线不可用时忽略。
+            }
+            ProcessWpfCriticalException(e);
+        }
+    }
+
+    internal async Task ProcessUnhandledExceptionCore(Exception e, bool critical)
+    {
 #if DEBUG
         // if (e.GetType() == typeof(ResourceReferenceKeyNotFoundException))
         // {

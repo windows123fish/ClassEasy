@@ -151,17 +151,33 @@ public partial class WelcomeWindow : MyWindow, INavigationPageFactory
         shortcut.Path = AppBase.ExecutingEntrance;
         shortcut.WorkingDirectory = Path.GetDirectoryName(AppBase.ExecutingEntrance);
         if (ViewModel.CreateStartupShortcut)
-            shortcut.Save(startupPath);
+            SafeSaveShortcut(shortcut, startupPath);
         if (ViewModel.CreateStartMenuShortcut)
-            shortcut.Save(startMenuPath);
+            SafeSaveShortcut(shortcut, startMenuPath);
         if (ViewModel.CreateDesktopShortcut)
-            shortcut.Save(desktopPath);
+            SafeSaveShortcut(shortcut, desktopPath);
         if (ViewModel.RegisterUrlScheme)
             UriProtocolRegisterHelper.Register();
         if (ViewModel is { CreateClassSwapShortcut: true, RegisterUrlScheme: true })
             await ShortcutHelpers.CreateClassSwapShortcutAsync();
     }
     
+    /// <summary>
+    /// 逐个保存快捷方式并隔离单个失败：某一位置（如被企业策略限制的启动文件夹）写入被拒时，
+    /// 其余位置的快捷方式仍应正常创建，而不是中断整个向导完成流程。
+    /// </summary>
+    private void SafeSaveShortcut(WindowsShortcut shortcut, string path)
+    {
+        try
+        {
+            shortcut.Save(path);
+        }
+        catch (Exception e)
+        {
+            App.GetService<ILogger<WelcomeWindow>>().LogError(e, "无法创建快捷方式：{}", path);
+        }
+    }
+
     private async Task CreateShortcutsFreedesktop()
     {
         var startupPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
